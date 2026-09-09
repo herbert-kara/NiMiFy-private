@@ -284,7 +284,8 @@ android-aab-release:
 	  --build-dart-define=sentry_dsn=$(SENTRY_DSN) \
 	  --build-dart-define=release=google-play
 
-windows-release: windows-zip-release windows-exe-release windows-msix-release
+windows-release: windows-zip-release windows-exe-release
+# msix target available manually: make windows-msix-release (needs windows\sign.pfx)
 
 windows-zip-release:
 	fastforge package \
