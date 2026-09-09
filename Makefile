@@ -473,7 +473,12 @@ android-aab-libs: android-libs
 
 windows-libs:
 	$(MKDIR) $(DESKTOP_OUT) || echo Folder already exists. Skipping...
+ifeq ($(CHANNEL),prod)
 	curl -L $(CORE_URL)/$(CORE_NAME)-windows-amd64.tar.gz | tar xz -C $(DESKTOP_OUT)/
+else
+	-curl -L --retry 3 -o $(DESKTOP_OUT)/core-win.tar.gz $(CORE_URL)/$(CORE_NAME)-windows-amd64.tar.gz
+	-tar xzf $(DESKTOP_OUT)/core-win.tar.gz -C $(DESKTOP_OUT)/ && rm $(DESKTOP_OUT)/core-win.tar.gz
+endif
 	ls $(DESKTOP_OUT) || dir $(DESKTOP_OUT)/
 	
 
