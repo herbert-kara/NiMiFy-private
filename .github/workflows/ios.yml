@@ -1,0 +1,68 @@
+name: iOS Unsigned IPA
+on:
+  workflow_dispatch:
+
+permissions: write-all
+
+env:
+  FLUTTER_VERSION: '3.38.5'
+
+jobs:
+  build-unsigned-ipa:
+    runs-on: macos-15
+    timeout-minutes: 90
+    steps:
+      - name: checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2.21.0
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+          cache: true
+
+      - name: Prepare
+        run: |
+          make get gen translate
+
+      - name: Download iOS core libs
+        run: |
+          mkdir -p ios/Frameworks
+          curl -L --retry 3 https://github.com/hiddify/hiddify-core/releases/download/draft/hiddify-lib-ios.tar.gz | tar xz -C ios/Frameworks/
+          ls ios/Frameworks/
+
+      - name: Pod install
+        run: |
+          cd ios && pod install
+
+      - name: Build unsigned iOS app
+        run: |
+          flutter build ios --release --no-codesign
+
+      - name: Package unsigned IPA
+        run: |
+          APP=build/ios/iphoneos/Runner.app
+          if [ ! -d "$APP" ]; then APP=build/ios/Release-iphoneos/Runner.app; fi
+          ls -la "$APP"
+          mkdir Payload
+          cp -R "$APP" Payload/
+          zip -qry NiMiFy-iOS-unsigned.ipa Payload
+          ls -la NiMiFy-iOS-unsigned.ipa
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: ios-unsigned-ipa
+          path: NiMiFy-iOS-unsigned.ipa
+          retention-days: 5
+
+      - name: Upload to draft release
+        uses: softprops/action-gh-release@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          files: NiMiFy-iOS-unsigned.ipa
+          name: 'draft'
+          tag_name: 'draft'
+          prerelease: true
