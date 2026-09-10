@@ -90,8 +90,10 @@ COMPONENT Runtime RENAME hiddify-core.dll)
 install(FILES "../hiddify-core/bin/libcronet.dll" DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"
 COMPONENT Runtime RENAME libcronet.dll)
 
-install(FILES "../hiddify-core/bin/HiddifyCli.exe" DESTINATION "${CMAKE_INSTALL_PREFIX}"
-COMPONENT Runtime RENAME HiddifyCli.exe)
+# HiddifyCli.exe intentionally NOT bundled:
+# - not needed for in-process core (proxy / system-proxy modes)
+# - it is the #1 Defender false-positive magnet breaking installs
+# - TUN-via-service mode is disabled in this fork
 
 
 if(PLUGIN_BUNDLED_LIBRARIES)
