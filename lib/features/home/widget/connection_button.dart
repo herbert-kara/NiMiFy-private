@@ -239,7 +239,7 @@ class _ConnectionButton extends StatelessWidget {
                 focusColor: Colors.grey,
                 onTap: onTap,
                 child: Padding(
-                  padding: const EdgeInsets.all(36),
+                  padding: const EdgeInsets.all(8),
                   child: TweenAnimationBuilder(
                     tween: ColorTween(end: buttonColor),
                     duration: const Duration(milliseconds: 250),
