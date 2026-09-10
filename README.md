@@ -1,6 +1,6 @@
 <div align="center">
 
-# NimHiddify
+# NiMiFy
 
 **Fork of [Hiddify](https://github.com/hiddify/hiddify-app) — Windows-focused build**
 
@@ -12,9 +12,9 @@
 
 A multi-platform proxy client based on [Sing-box](https://github.com/SagerNet/sing-box), forked from [hiddify/hiddify-app](https://github.com/hiddify/hiddify-app) and customized:
 
-- ✅ Windows branding: `NimHiddify` (separate install dir, app identity, registry keys, mutex — no clash with an existing Hiddify install; both can coexist)
+- ✅ Windows branding: `NiMiFy` (separate install dir, app identity, registry keys, mutex — no clash with an existing Hiddify install; both can coexist)
 - ✅ Windows-only build pipeline: fork's GitHub Actions builds only the Windows targets (exe installer / portable zip), no Android/iOS/macOS jobs, no store releases
-- ✅ All update/appcast/release URLs point at this fork — updates come from `Nim4a/hiddify-app` releases
+- ✅ All update/appcast/release URLs point at this fork — updates come from `Nim4a/NiMiFy` releases
 - ✅ Simplified `make windows-libs`: downloads core with retry into `hiddify-core/bin/` (robust on flaky links)
 - ✅ Upstream bug-fix base: forked at commit `276a7ef` (v4.1.2 line)
 
@@ -24,16 +24,16 @@ VLESS, VMess, Reality, TUIC, Hysteria, Hysteria2, Shadowsocks, Trojan, WireGuard
 
 ## Windows download
 
-Get the installer from [Releases](https://github.com/Nim4a/hiddify-app/releases):
+Get the installer from [Releases](https://github.com/Nim4a/NiMiFy/releases):
 
-- `NimHiddify-Windows-Setup-x64.exe` — Inno Setup installer
-- `NimHiddify-Windows-Portable-x64.zip` — portable, no install
-- `NimHiddify-Windows-x64.msix` — MSIX (unsigned build; enable sideloading or install the provided cert)
+- `NiMiFy-Windows-Setup-x64.exe` — Inno Setup installer
+- `NiMiFy-Windows-Portable-x64.zip` — portable, no install
+- `NiMiFy-Windows-x64.msix` — MSIX (unsigned build; enable sideloading or install the provided cert)
 
 ## Build from source (Windows)
 
 ```bash
-git clone https://github.com/Nim4a/hiddify-app.git
+git clone https://github.com/Nim4a/NiMiFy.git
 cd hiddify-app
 make windows-prepare   # pub get, build_runner, slang, downloads core libs
 make windows-release   # zip + exe + msix via fastforge

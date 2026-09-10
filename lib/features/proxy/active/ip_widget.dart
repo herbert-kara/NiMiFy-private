@@ -125,14 +125,17 @@ class IPCountryFlag extends HookConsumerWidget {
                   textDirection: Directionality.of(context),
                   alignment: Alignment.center,
                   children: [
-                    CircleFlag(
-                      // key: ValueKey(countryCode),
-                      countryCode!.toLowerCase() == "ir" ? "ir-shir" : countryCode!,
-                      size: size - 8,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8), // Rounded effect
+                    if (countryCode!.toLowerCase() == "ir")
+                      const SizedBox.shrink()
+                    else
+                      CircleFlag(
+                        // key: ValueKey(countryCode),
+                        countryCode!,
+                        size: size - 8,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8), // Rounded effect
+                        ),
                       ),
-                    ),
                     if (organization != null)
                       Positioned.directional(
                         textDirection: Directionality.of(context),

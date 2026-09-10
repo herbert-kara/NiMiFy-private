@@ -25,9 +25,9 @@ env:
   # TARGET_NAME_rpm: "Hiddify-rpm-x64"
   TARGET_NAME_apk: "Hiddify-Android"
   TARGET_NAME_aab: "Hiddify-Android"
-  TARGET_NAME_exe: "NimHiddify-Windows-Setup-x64"
-  TARGET_NAME_msix: "NimHiddify-Windows-x64"
-  TARGET_NAME_zip: "NimHiddify-Windows-Portable-x64"
+  TARGET_NAME_exe: "NiMiFy-Windows-Setup-x64"
+  TARGET_NAME_msix: "NiMiFy-Windows-x64"
+  TARGET_NAME_zip: "NiMiFy-Windows-Portable-x64"
   TARGET_NAME_dmg: "Hiddify-MacOS"
   TARGET_NAME_pkg: "Hiddify-MacOS-Installer"
   TARGET_NAME_ipa: "Hiddify-iOS"
@@ -165,7 +165,7 @@ jobs:
           set +e 
           sed 's|RELEASE_TAG|${{ env.TAG_NAME }}|g' ./.github/release_message.md > release.md
           pip install gitchangelog pystache mustache markdown
-          prelease=$(curl --silent "https://api.github.com/repos/Nim4a/hiddify-app/releases/latest" | grep -Po '"tag_name": "\K([^"]*)') 
+          prelease=$(curl --silent "https://api.github.com/repos/Nim4a/NiMiFy/releases/latest" | grep -Po '"tag_name": "\K([^"]*)') 
           echo -e "\n\n<details markdown=1><summary>All changes from $current to the latest commit:</summary>\n\n">>release.md
           gitchangelog "${prelease}.." >> release.md  2>&1 || echo "Error in gitchangelog"
           echo -e "\n\n</details>">>release.md

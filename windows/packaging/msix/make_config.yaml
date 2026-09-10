@@ -1,15 +1,15 @@
-display_name: NimHiddify
-publisher_display_name: NimHiddify
-identity_name: Nim4a.NimHiddify
+display_name: NiMiFy
+publisher_display_name: NiMiFy
+identity_name: Nim4a.NiMiFy
 msix_version: 4.1.2.0
 logo_path: windows\runner\resources\app_icon.ico
 capabilities: internetClient, internetClientServer, privateNetworkClientServer
 languages: ar, en-us, es-es, fa-ir, fr-fr, id-id, pt-br, ru-ru, tr-tr, zh-cn, zh-tw
 protocol_activation: hiddify, v2ray, v2rayn, v2rayng, clash, clashmeta, sing-box
-execution_alias: nimhiddify
+execution_alias: nimify
 certificate_path: windows\sign.pfx
 certificate_password:
-publisher: CN=Nim4a-NimHiddify
+publisher: CN=Nim4a-NiMiFy
 install_certificate: "false"
 enable_at_startup: "true"
 startup_task:
