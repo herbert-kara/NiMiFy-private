@@ -140,6 +140,7 @@ jobs:
           cp ./build/app/outputs/flutter-apk/*armeabi-v7a*.apk out/NiMiFy-Android-arm7.apk || echo no arm7
           cp ./build/app/outputs/flutter-apk/*x86_64*.apk out/NiMiFy-Android-x86_64.apk || echo no x64
           cp ./build/app/outputs/flutter-apk/app-release.apk out/NiMiFy-Android-universal.apk || echo no universal
+          cp ./build/app/outputs/flutter-apk/app-debug.apk out/NiMiFy-Android-debug.apk || echo no debug
 
       - name: Upload Artifact
         if: env.UPLOAD_ARTIFACT == 'true'
