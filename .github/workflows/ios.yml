@@ -29,7 +29,7 @@ jobs:
       - name: Download iOS core libs
         run: |
           mkdir -p ios/Frameworks
-          curl -L --retry 3 https://github.com/hiddify/hiddify-core/releases/download/draft/hiddify-lib-ios.tar.gz | tar xz -C ios/Frameworks/
+          curl -L --retry 3 https://github.com/hiddify/hiddify-core/releases/download/v4.1.0/hiddify-lib-ios.tar.gz | tar xz -C ios/Frameworks/
           ls ios/Frameworks/
 
       - name: Pod install
