@@ -15,5 +15,7 @@ class ProxyService :
 
     override fun onDestroy() = service.onDestroy()
 
-    override fun sendNotification(notification: Notification) = service.sendNotification(notification)
+    override fun sendNotification(notification: Notification?) {
+        if (notification != null) service.sendNotification(notification)
+    }
 }
