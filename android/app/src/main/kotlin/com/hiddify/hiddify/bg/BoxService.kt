@@ -56,6 +56,11 @@ class BoxService(
     companion object {
         private const val TAG = "A/BoxService"
 
+        // Strong reference so Go/Seq never loses the Java-side proxy, and
+        // a flag so we never re-setup/close a core while Go goroutines still
+        // hold old refs (native abort "Unknown reference" in go_seq_from_refnum).
+        @Volatile var grpcCoreUp = false
+        private var keepPlatformInterfaceAlive: PlatformInterface? = null
         private var initializeOnce = false
         private lateinit var workingDir: File
         private fun initialize() {
@@ -161,25 +166,28 @@ class BoxService(
 
             DefaultNetworkMonitor.start()
             Libbox.setMemoryLimit(!Settings.disableMemoryLimit)
-            val newService = try {
-                Mobile.setup(
-                    SetupOptions().also {
-                        it.basePath = Settings.baseDir
-                        it.workingDir = Settings.workingDir
-                        it.tempDir = Settings.tempDir
-                        it.fixAndroidStack = com.hiddify.hiddify.bg.Bugs.fixAndroidStack
-                        it.mode=4L//mode.toLong()
-                        it.listen= "127.0.0.1:${Settings.grpcServiceModePort}"
-                        it.secret=""
-                        it.debug = Settings.debugMode
-                    },platformInterface)
-
-
-//                Libbox.newService(content,platformInterface)
-
-            } catch (e: Exception) {
-                stopAndAlert(Alert.CreateService, e.message)
-                return
+            if (grpcCoreUp) {
+                Log.d(TAG, "grpc core already up, skipping Mobile.setup")
+            } else {
+                keepPlatformInterfaceAlive = platformInterface
+                try {
+                    Mobile.setup(
+                        SetupOptions().also {
+                            it.basePath = Settings.baseDir
+                            it.workingDir = Settings.workingDir
+                            it.tempDir = Settings.tempDir
+                            it.fixAndroidStack = com.hiddify.hiddify.bg.Bugs.fixAndroidStack
+                            it.mode=4L//mode.toLong()
+                            it.listen= "127.0.0.1:${Settings.grpcServiceModePort}"
+                            it.secret=""
+                            it.debug = Settings.debugMode
+                        },platformInterface)
+                    grpcCoreUp = true
+                } catch (e: Exception) {
+                    keepPlatformInterfaceAlive = null
+                    stopAndAlert(Alert.CreateService, e.message)
+                    return
+                }
             }
             status.postValue(Status.Started)
 
@@ -295,7 +303,11 @@ class BoxService(
 //            commandServer = null
             Settings.startedByUser = false
             withContext(Dispatchers.Main) {
-                Mobile.close(4L)
+                if (grpcCoreUp) {
+                    Mobile.close(4L)
+                    grpcCoreUp = false
+                }
+                keepPlatformInterfaceAlive = null
                 status.value = Status.Stopped
                 service.stopSelf()
             }
