@@ -273,7 +273,7 @@ android-apk-release:
 	  --build-target=$(TARGET) \
 	  --build-target-platform=android-arm,android-arm64,android-x64 \
 	  --build-dart-define=sentry_dsn=$(SENTRY_DSN)
-	flutter build apk --debug --target $(TARGET) --build-dart-define=sentry_dsn=$(SENTRY_DSN) || true
+	flutter build apk --debug --target $(TARGET) || true
 	cp build/app/outputs/flutter-apk/app-debug.apk dist/ 2>/dev/null || mkdir -p dist && cp build/app/outputs/flutter-apk/app-debug.apk dist/ || true
 	ls -R build/app/outputs
 
