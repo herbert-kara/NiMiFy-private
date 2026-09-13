@@ -316,7 +316,7 @@ class SwitchPanelPainter extends CustomPainter {
     canvas.restore();
 
     // engraved ON above slot, OFF below (aviation panel labels)
-    final TextPainter label(bool on) => TextPainter(
+    TextPainter label(bool on) => TextPainter(
           text: TextSpan(
             text: on ? "ON" : "OFF",
             style: TextStyle(
