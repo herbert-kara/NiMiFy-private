@@ -77,7 +77,6 @@ class HomePage extends HookConsumerWidget {
         onPointerDown: (_) => pixelTouched.value = true,
         onPointerUp: (_) => pixelTouched.value = false,
         onPointerCancel: (_) => pixelTouched.value = false,
-        onPointerRemove: (_) => pixelTouched.value = false,
         child: Stack(
           children: [
             const Positioned.fill(child: PixelBackgroundWidget()),
