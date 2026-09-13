@@ -565,8 +565,10 @@ class HiddifyCoreService with InfraLogger {
       return;
     }
     if (!core.isSingleChannel()) {
+      // Close ONLY the foreground listeners/channels. Stopping the "bg" ones
+      // here kills the status stream while the service is still connecting,
+      // so the app never receives CoreStarted and looks dead on resume.
       await stopListenSingle("fg");
-      await stopListenSingle("bg");
       try {
         await core.fgClient.close(CloseRequest(mode: SetupMode.GRPC_NORMAL_INSECURE));
       } catch (e) {}
