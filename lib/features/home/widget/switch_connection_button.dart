@@ -233,7 +233,7 @@ class SwitchPanelPainter extends CustomPainter {
         ledRect.deflate(1).shift(const Offset(0, -0.5)),
         const Radius.circular(1),
       ),
-      Paint()..color = Colors.white.withAlpha(40 + 80 * glow),
+      Paint()..color = Colors.white.withAlpha(40 + (80 * glow).round()),
     );
 
     // ---- the flip lever ----
