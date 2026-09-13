@@ -113,8 +113,16 @@ class ConnectionButton extends HookConsumerWidget {
       AsyncData(value: Connecting()) => true,
       _ => false,
     };
+    // pulse rings animate while connected with a live delay; steady otherwise
+    final bool pulse = switch (connectionStatus) {
+      AsyncData(value: Connected()) when requiresReconnect == true => false,
+      AsyncData(value: Connected()) when delay <= 0 || delay >= 65000 => false,
+      AsyncData(value: Connected()) => true,
+      AsyncData(value: Connecting()) => true,
+      _ => false,
+    };
     return SwitchCircleButton(
-      animationValue: animated ? 1 : 0.85,
+      pulse: pulse,
       isOn: isSwitchOn,
       onTap: switch (connectionStatus) {
         AsyncData(value: Connected()) when requiresReconnect == true => () async {
