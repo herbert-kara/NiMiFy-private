@@ -5,6 +5,7 @@ import 'package:hiddify/core/app_info/app_info_provider.dart';
 import 'package:hiddify/core/localization/translations.dart';
 import 'package:hiddify/core/router/bottom_sheets/bottom_sheets_notifier.dart';
 import 'package:hiddify/features/home/widget/connection_button.dart';
+import 'package:hiddify/features/home/widget/pixel_background.dart';
 import 'package:hiddify/features/profile/notifier/active_profile_notifier.dart';
 import 'package:hiddify/features/profile/widget/profile_tile.dart';
 import 'package:hiddify/features/proxy/active/active_proxy_card.dart';
@@ -71,32 +72,20 @@ class HomePage extends HookConsumerWidget {
           const Gap(8),
         ],
       ),
-      body: Container(
-        decoration: BoxDecoration(
-          image: DecorationImage(
-            image: const AssetImage('assets/images/world_map.png'), // Replace with your image path
-            fit: BoxFit.cover,
-            opacity: 0.09,
-            colorFilter: theme.brightness == Brightness.dark
-                ? ColorFilter.mode(Colors.white.withValues(alpha: .15), BlendMode.srcIn) //
-                : ColorFilter.mode(
-                    Colors.grey.withValues(alpha: 1),
-                    BlendMode.srcATop,
-                  ), // Apply white tint in dark mode
-          ),
-        ),
+      body: Listener(
+        behavior: HitTestBehavior.translucent,
+        onPointerDown: (_) => pixelTouched.value = true,
+        onPointerUp: (_) => pixelTouched.value = false,
+        onPointerCancel: (_) => pixelTouched.value = false,
+        onPointerRemove: (_) => pixelTouched.value = false,
         child: Stack(
-          alignment: Alignment.center,
           children: [
+            const Positioned.fill(child: PixelBackgroundWidget()),
             Center(
               child: ConstrainedBox(
-                constraints: const BoxConstraints(
-                  maxWidth: 600, // Set the maximum width here
-                ),
+                constraints: const BoxConstraints(maxWidth: 600),
                 child: CustomScrollView(
                   slivers: [
-                    // switch (activeProfile) {
-                    // AsyncData(value: final profile?) =>
                     MultiSliver(
                       children: [
                         // const Gap(100),
@@ -135,7 +124,7 @@ class HomePage extends HookConsumerWidget {
                     // AsyncError(:final error) => SliverErrorBodyPlaceholder(t.presentShortError(error)),
                     // _ => const SliverToBoxAdapter(),
                     // },
-                  ],
+                                    ],
                 ),
               ),
             ),
