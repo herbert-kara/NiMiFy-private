@@ -475,7 +475,7 @@ android-libs:
 # must match the app's generated protos. The stable v4.1.0 android core crashes on
 # connect (native), while upstream draft APK pairs app~main with core draft.
 # Windows keeps the pinned stable core (verified working).
-CORE_URL_ANDROID=https://github.com/Nim4a/hiddify-core/releases/download/draft
+CORE_URL_ANDROID=https://github.com/Nim4a/hiddify-core-private/releases/download/draft
 
 android-apk-libs: android-libs
 android-aab-libs: android-libs
