@@ -60,6 +60,9 @@ class BoxService(
         // a flag so we never re-setup/close a core while Go goroutines still
         // hold old refs (native abort "Unknown reference" in go_seq_from_refnum).
         @Volatile var grpcCoreUp = false
+        // live status mirror so other components (e.g. MainActivity.onDestroy)
+        // can check whether the service is running without binding
+        @Volatile var serviceRunning: Boolean = false
         private var keepPlatformInterfaceAlive: PlatformInterface? = null
         private var initializeOnce = false
         private lateinit var workingDir: File
@@ -309,6 +312,7 @@ class BoxService(
                 }
                 keepPlatformInterfaceAlive = null
                 status.value = Status.Stopped
+                serviceRunning = false
                 service.stopSelf()
             }
             notification.close()
@@ -327,6 +331,7 @@ class BoxService(
                 callback.onServiceAlert(type.ordinal, message)
             }
             status.value = Status.Stopped
+            serviceRunning = false
         }
     }
 
@@ -335,6 +340,7 @@ class BoxService(
     internal fun onStartCommand(): Int {
         if (status.value != Status.Stopped) return Service.START_NOT_STICKY
         status.value = Status.Starting
+        serviceRunning = true
 
         if (!receiverRegistered) {
             ContextCompat.registerReceiver(service, receiver, IntentFilter().apply {

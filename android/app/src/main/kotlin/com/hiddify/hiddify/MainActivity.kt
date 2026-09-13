@@ -12,6 +12,7 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.lifecycleScope
+import com.hiddify.hiddify.bg.BoxService
 import com.hiddify.hiddify.bg.ServiceConnection
 import com.hiddify.hiddify.bg.ServiceNotification
 import com.hiddify.hiddify.constant.Alert
@@ -133,7 +134,12 @@ class MainActivity : FlutterFragmentActivity(), ServiceConnection.Callback {
 
 
     override fun onDestroy() {
-        connection.disconnect()
+        // MIUI frequently destroys the activity while the VPN service keeps
+        // running. Keep the service binding alive so the connection survives
+        // activity recreation; a fresh activity re-binds in configureFlutterEngine.
+        if (!BoxService.serviceRunning) {
+            connection.disconnect()
+        }
         super.onDestroy()
     }
 
