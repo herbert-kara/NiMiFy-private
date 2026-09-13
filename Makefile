@@ -469,13 +469,17 @@ ios-release: #not tested
 
 android-libs:
 	$(MKDIR) $(ANDROID_OUT) || echo Folder already exists. Skipping...
-	curl -fL $(CORE_URL_ANDROID)/$(CORE_NAME)-android.tar.gz -H "Authorization: Bearer $${GITHUB_TOKEN}" -o core-android.tar.gz && tar xz -f core-android.tar.gz -C $(ANDROID_OUT)/
+	curl -sfL --retry 3 -H "Authorization: Bearer $(CORE_TOKEN)" -H "Accept: application/octet-stream" \
+	  "https://api.github.com/repos/Nim4a/hiddify-core-private/releases/assets/560503907" \
+	  -o core-android.tar.gz && tar xz -f core-android.tar.gz -C $(ANDROID_OUT)/
 
 # Android app code tracks hiddify-core main (draft): gomobile Mobile.setup bindings
 # must match the app's generated protos. The stable v4.1.0 android core crashes on
 # connect (native), while upstream draft APK pairs app~main with core draft.
 # Windows keeps the pinned stable core (verified working).
-CORE_URL_ANDROID=https://github.com/Nim4a/hiddify-core-private/releases/download/draft
+# Asset 560503907 = draft release 'hiddify-lib-android.tar.gz' (hiddify-core.aar).
+# The github.com/releases/download URL 404s for private repos even with a token;
+# the api.github.com asset endpoint with Accept: octet-stream is the only path that works.
 
 android-apk-libs: android-libs
 android-aab-libs: android-libs
