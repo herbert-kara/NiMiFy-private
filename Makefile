@@ -469,7 +469,7 @@ ios-release: #not tested
 
 android-libs:
 	$(MKDIR) $(ANDROID_OUT) || echo Folder already exists. Skipping...
-	curl -L $(CORE_URL_ANDROID)/$(CORE_NAME)-android.tar.gz | tar xz -C $(ANDROID_OUT)/
+	curl -fL $(CORE_URL_ANDROID)/$(CORE_NAME)-android.tar.gz -H "Authorization: Bearer $${GITHUB_TOKEN}" -o core-android.tar.gz && tar xz -f core-android.tar.gz -C $(ANDROID_OUT)/
 
 # Android app code tracks hiddify-core main (draft): gomobile Mobile.setup bindings
 # must match the app's generated protos. The stable v4.1.0 android core crashes on
