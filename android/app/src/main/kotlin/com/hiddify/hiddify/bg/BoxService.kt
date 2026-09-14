@@ -342,6 +342,13 @@ class BoxService(
         status.value = Status.Starting
         serviceRunning = true
 
+        // Promote to foreground IMMEDIATELY, synchronously. Android gives a
+        // started foreground service ~5s to call startForeground(); previously
+        // it only happened deep inside the IO coroutine (after initialize()),
+        // so a slow init triggered ForegroundServiceDidNotStartInTimeException
+        // and the system killed the whole process mid-connect.
+        notification.show(activeProfileName, R.string.status_starting)
+
         if (!receiverRegistered) {
             ContextCompat.registerReceiver(service, receiver, IntentFilter().apply {
                 addAction(Action.SERVICE_CLOSE)

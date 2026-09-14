@@ -8,6 +8,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.ServiceInfo
 import android.os.Build
 import android.util.Log
 import androidx.annotation.StringRes
@@ -113,10 +114,16 @@ class ServiceNotification(private val status: MutableLiveData<Status>, private v
                 )
             )
         }
-        service.startForeground(
+        // ServiceCompat with the declared type: on API 34+ a bare
+        // startForeground() without FOREGROUND_SERVICE_TYPE is rejected.
+        ServiceCompat.startForeground(
+            service,
             notificationId, notificationBuilder
                 .setContentTitle(profileName.takeIf { it.isNotBlank() } ?: "Hiddify")
-                .setContentText(service.getString(contentTextId)).build()
+                .setContentText(service.getString(contentTextId)).build(),
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+            } else 0
         )
     }
 
