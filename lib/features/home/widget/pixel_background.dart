@@ -1,12 +1,9 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 
-/// Global touch state: while the user holds a finger anywhere on the home
-/// page, the pixels dim (switch off).
-final pixelTouched = ValueNotifier<bool>(false);
-
-/// Floating colored pixels — same RGB palette as the portfolio hero header.
-/// Positioned behind home page content; replaces the old world-map image.
+/// Dribbble-style home background: vertical charcoal gradient with a soft
+/// accent glow behind the power button — neutral gray-blue when
+/// disconnected, mint-green tint when connected. Replaces floating pixels.
 class PixelBackgroundWidget extends StatefulWidget {
   const PixelBackgroundWidget({super.key});
 
@@ -17,35 +14,18 @@ class PixelBackgroundWidget extends StatefulWidget {
 class _PixelBackgroundWidgetState extends State<PixelBackgroundWidget>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
-  final _random = Random();
-  final List<_Pixel> _pixels = [];
 
-  static const _palette = <Color>[
-    Color(0xFFC33B2E), // red
-    Color(0xFF3F9D4F), // green
-    Color(0xFF3B6FC3), // blue
-  ];
+  // bg accent, mirrored from the connection button state
+  static final ValueNotifier<Color> bgAccent =
+      ValueNotifier(const Color(0xFF4A4D8B));
 
   @override
   void initState() {
     super.initState();
-    for (var i = 0; i < 28; i++) {
-      _pixels.add(
-        _Pixel(
-          color: _palette[i % 3],
-          x: _random.nextDouble(),
-          y: .5 + _random.nextDouble() * .55,
-          drift: (_random.nextDouble() * 90 - 45) / 600,
-          size: i % 6 == 0 ? 7.0 : 4.0 + _random.nextDouble() * 1.5,
-          speed: .04 + _random.nextDouble() * .05,
-          phase: _random.nextDouble() * 2 * pi,
-        ),
-      );
-    }
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(minutes: 2),
-    )..repeat();
+      duration: const Duration(seconds: 3),
+    )..repeat(reverse: true);
   }
 
   @override
@@ -57,13 +37,16 @@ class _PixelBackgroundWidgetState extends State<PixelBackgroundWidget>
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
-      animation: Listenable.merge([_controller, pixelTouched]),
+      animation: Listenable.merge([_controller, bgAccent]),
       builder: (context, _) {
+        final accent = bgAccent.value;
+        // true when the accent is greenish (connected)
+        final on = accent.green > accent.red;
         return CustomPaint(
-          painter: _PixelPainter(
-            pixels: _pixels,
-            time: _controller.value * 120,
-            touched: pixelTouched.value,
+          painter: _GlowBgPainter(
+            accent: accent,
+            on: on ? 1 : 0,
+            breath: _controller.value,
           ),
         );
       },
@@ -71,68 +54,47 @@ class _PixelBackgroundWidgetState extends State<PixelBackgroundWidget>
   }
 }
 
-class _Pixel {
-  _Pixel({
-    required this.color,
-    required this.x,
-    required this.y,
-    required this.drift,
-    required this.size,
-    required this.speed,
-    required this.phase,
-  });
+class _GlowBgPainter extends CustomPainter {
+  final Color accent;
+  final double on; // 1 connected, 0 disconnected
+  final double breath; // 0..1 slow breathing
 
-  final Color color;
-  final double x;
-  final double y;
-  final double drift;
-  final double size;
-  final double speed;
-  final double phase;
-}
-
-class _PixelPainter extends CustomPainter {
-  _PixelPainter({required this.pixels, required this.time, required this.touched});
-
-  final List<_Pixel> pixels;
-  final double time;
-  final bool touched;
+  _GlowBgPainter({required this.accent, required this.on, required this.breath});
 
   @override
   void paint(Canvas canvas, Size size) {
     if (size.isEmpty) return;
-    final paint = Paint();
-    for (final p in pixels) {
-      var progress = (p.y - time * p.speed) % 1;
-      if (progress < 0) progress += 1;
-      final dy = size.height * progress;
-      final wobble = sin(time * .6 + p.phase) * p.drift;
-      final dx = (size.width * p.x + size.width * wobble) % size.width;
 
-      var opacity = 1.0;
-      const edge = .1;
-      if (progress > 1 - edge) {
-        opacity = (1 - progress) / edge;
-      } else if (progress < edge) {
-        opacity = progress / edge;
-      }
+    // base charcoal gradient, slight blue-gray tint
+    final Rect full = Offset.zero & size;
+    canvas.drawRect(
+      full,
+      Paint()
+        ..shader = const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Color(0xFF34383E),
+            Color(0xFF2C3036),
+            Color(0xFF23272C),
+          ],
+        ).createShader(full),
+    );
 
-      final base = touched ? .08 : .5; // dimmed while touched
-      paint.color = p.color.withValues(alpha: base * opacity);
-
-      final rect = Rect.fromCenter(
-        center: Offset(dx, dy),
-        width: p.size,
-        height: p.size,
-      );
-      canvas.drawRRect(
-        RRect.fromRectAndRadius(rect, const Radius.circular(1)),
-        paint,
-      );
-    }
+    // big soft radial glow behind the button (center of screen)
+    final Offset c = Offset(size.width / 2, size.height * 0.42);
+    final double glowR = size.longestSide * 0.62;
+    final Paint glow = Paint()
+      ..shader = RadialGradient(
+        colors: [
+          accent.withOpacity(0.16 + 0.10 * on + 0.05 * breath * on),
+          accent.withOpacity(0.0),
+        ],
+      ).createShader(Rect.fromCircle(center: c, radius: glowR));
+    canvas.drawCircle(c, glowR, glow);
   }
 
   @override
-  bool shouldRepaint(_PixelPainter old) =>
-      old.time != time || old.touched != touched;
+  bool shouldRepaint(_GlowBgPainter old) =>
+      old.accent != accent || old.on != on || old.breath != breath;
 }

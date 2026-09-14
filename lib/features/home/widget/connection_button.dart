@@ -9,6 +9,7 @@ import 'package:hiddify/features/connection/notifier/connection_notifier.dart';
 import 'package:hiddify/features/profile/notifier/active_profile_notifier.dart';
 import 'package:hiddify/features/proxy/active/active_proxy_notifier.dart';
 import 'package:hiddify/features/settings/notifier/config_option/config_option_notifier.dart';
+import 'package:hiddify/features/home/widget/pixel_background.dart';
 import 'package:hiddify/features/home/widget/switch_connection_button.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -121,6 +122,18 @@ class ConnectionButton extends HookConsumerWidget {
       AsyncData(value: Connecting()) => true,
       _ => false,
     };
+    // mirror the status color to the home background glow
+    final Color statusColor = switch (connectionStatus) {
+      AsyncData(value: Connected()) when requiresReconnect == true => Colors.teal,
+      AsyncData(value: Connected()) when delay <= 0 || delay >= 65000 => const Color.fromARGB(255, 185, 176, 103),
+      AsyncData(value: Connected()) => buttonTheme.connectedColor!,
+      AsyncData(value: _) => buttonTheme.idleColor!,
+      _ => Colors.red,
+    };
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      PixelBackgroundWidget.bgAccent.value = statusColor;
+    });
+
     return SwitchCircleButton(
       pulse: pulse,
       isOn: isSwitchOn,

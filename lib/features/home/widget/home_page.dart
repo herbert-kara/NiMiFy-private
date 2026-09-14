@@ -72,12 +72,7 @@ class HomePage extends HookConsumerWidget {
           const Gap(8),
         ],
       ),
-      body: Listener(
-        behavior: HitTestBehavior.translucent,
-        onPointerDown: (_) => pixelTouched.value = true,
-        onPointerUp: (_) => pixelTouched.value = false,
-        onPointerCancel: (_) => pixelTouched.value = false,
-        child: Stack(
+      body: Stack(
           children: [
             const Positioned.fill(child: PixelBackgroundWidget()),
             Center(
@@ -165,7 +160,6 @@ class HomePage extends HookConsumerWidget {
                 ),
               ),
           ],
-        ),
       ),
     );
   }
