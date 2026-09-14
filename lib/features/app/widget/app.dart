@@ -33,7 +33,12 @@ class App extends HookConsumerWidget with WidgetsBindingObserver, PresLogger {
   const App({super.key});
 
   void onInactive(WidgetRef ref) {
-    onPause(ref);
+    // Android fires `inactive` transiently (dialogs, permission prompts,
+    // even mid-connect transitions). Calling closeFront() there tears the
+    // foreground gRPC channel down DURING connecting and the app never
+    // receives the connected event — the classic "closes while connecting".
+    // Only a real `paused` should release the foreground channel.
+    loggy.info("app inactive (transient) — keeping channels alive");
   }
 
   void onPause(WidgetRef ref) {
