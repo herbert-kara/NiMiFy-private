@@ -10,6 +10,7 @@ import 'package:hiddify/features/connection/notifier/connection_notifier.dart';
 import 'package:hiddify/features/profile/notifier/active_profile_notifier.dart';
 import 'package:hiddify/features/proxy/active/active_proxy_notifier.dart';
 import 'package:hiddify/features/settings/notifier/config_option/config_option_notifier.dart';
+import 'package:hiddify/features/home/widget/home_bg_accent.dart';
 import 'package:hiddify/features/home/widget/switch_connection_button.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
