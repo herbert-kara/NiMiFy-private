@@ -5,7 +5,7 @@ import 'package:hiddify/core/app_info/app_info_provider.dart';
 import 'package:hiddify/core/localization/translations.dart';
 import 'package:hiddify/core/router/bottom_sheets/bottom_sheets_notifier.dart';
 import 'package:hiddify/features/home/widget/connection_button.dart';
-import 'package:hiddify/features/home/widget/pixel_background.dart';
+import 'package:hiddify/features/home/widget/home_bg_accent.dart';
 import 'package:hiddify/features/profile/notifier/active_profile_notifier.dart';
 import 'package:hiddify/features/profile/widget/profile_tile.dart';
 import 'package:hiddify/features/proxy/active/active_proxy_card.dart';
@@ -23,9 +23,14 @@ class HomePage extends HookConsumerWidget {
     final t = ref.watch(translationsProvider).requireValue;
     // final hasAnyProfile = ref.watch(hasAnyProfileProvider);
     final activeProfile = ref.watch(activeProfileProvider);
+    final bgAccent = useValueNotifier(const Color(0xFF4A4D8B));
 
-    return Scaffold(
+    return HomeBgAccent(
+      accent: bgAccent,
+      child: Scaffold(
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
+        backgroundColor: Colors.transparent,
         // leading: (RootScaffold.stateKey.currentState?.hasDrawer ?? false) && showDrawerButton(context)
         //     ? DrawerButton(
         //         onPressed: () {
@@ -74,7 +79,18 @@ class HomePage extends HookConsumerWidget {
       ),
       body: Stack(
           children: [
-            const Positioned.fill(child: PixelBackgroundWidget()),
+            // Dribbble-style background: charcoal gradient + status glow
+            Positioned.fill(
+              child: ValueListenableBuilder<Color>(
+                valueListenable: bgAccent,
+                builder: (context, accent, _) {
+                  final on = accent.green > accent.red;
+                  return CustomPaint(
+                    painter: _HomeBgPainter(accent: accent, on: on ? 1 : 0),
+                  );
+                },
+              ),
+            ),
             Center(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 600),
@@ -161,8 +177,51 @@ class HomePage extends HookConsumerWidget {
               ),
           ],
       ),
+      ),
     );
   }
+}
+
+/// Dribbble-style home background: vertical charcoal gradient + soft radial
+/// status glow behind the power button.
+class _HomeBgPainter extends CustomPainter {
+  final Color accent;
+  final double on;
+
+  _HomeBgPainter({required this.accent, required this.on});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (size.isEmpty) return;
+    final Rect full = Offset.zero & size;
+    canvas.drawRect(
+      full,
+      Paint()
+        ..shader = const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Color(0xFF34383E),
+            Color(0xFF2C3036),
+            Color(0xFF23272C),
+          ],
+        ).createShader(full),
+    );
+    final Offset c = Offset(size.width / 2, size.height * 0.42);
+    final double glowR = size.longestSide * 0.62;
+    final Paint glow = Paint()
+      ..shader = RadialGradient(
+        colors: [
+          accent.withOpacity(0.16 + 0.10 * on),
+          accent.withOpacity(0.0),
+        ],
+      ).createShader(Rect.fromCircle(center: c, radius: glowR));
+    canvas.drawCircle(c, glowR, glow);
+  }
+
+  @override
+  bool shouldRepaint(_HomeBgPainter old) =>
+      old.accent != accent || old.on != on;
 }
 
 class AppVersionLabel extends HookConsumerWidget {
