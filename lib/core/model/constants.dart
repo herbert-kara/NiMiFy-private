@@ -4,11 +4,11 @@ import 'package:hiddify/utils/utils.dart';
 
 abstract class Constants {
   static const appName = "NiMiFy";
-  static const githubUrl = "https://github.com/Nim4a/NiMiFy";
-  static const licenseUrl = "https://github.com/Nim4a/NiMiFy/blob/main/LICENSE.md";
-  static const githubReleasesApiUrl = "https://api.github.com/repos/Nim4a/NiMiFy/releases";
-  static const githubLatestReleaseUrl = "https://github.com/Nim4a/NiMiFy/releases/latest";
-  static const appCastUrl = "https://raw.githubusercontent.com/Nim4a/NiMiFy/main/appcast.xml";
+  static const githubUrl = "https://github.com/herbert-kara/NiMiFy-private";
+  static const licenseUrl = "https://github.com/herbert-kara/NiMiFy-private/blob/main/LICENSE.md";
+  static const githubReleasesApiUrl = "https://api.github.com/repos/herbert-kara/NiMiFy-private/releases";
+  static const githubLatestReleaseUrl = "https://github.com/herbert-kara/NiMiFy-private/releases/latest";
+  static const appCastUrl = "https://raw.githubusercontent.com/herbert-kara/NiMiFy-private/main/appcast.xml";
   static const telegramChannelUrl = "https://t.me/hiddify";
   static const privacyPolicyUrl = "https://hiddify.com/privacy-policy/";
   static const termsAndConditionsUrl = "https://hiddify.com/terms/";

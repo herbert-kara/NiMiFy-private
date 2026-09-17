@@ -6,7 +6,7 @@
             <title>Version 4.1.2</title>
             <pubDate>Thu, 10 Sep 2026 12:00:00 +0000</pubDate>
             <enclosure
-                url="https://github.com/Nim4a/NiMiFy/releases/download/v4.1.2/NiMiFy-Windows-Setup-x64.exe"
+                url="https://github.com/herbert-kara/NiMiFy-private/releases/download/v4.1.2/NiMiFy-Windows-Setup-x64.exe"
                 sparkle:version="4.1.2" sparkle:os="windows" />
         </item>
     </channel>

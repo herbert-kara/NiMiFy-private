@@ -1,6 +1,6 @@
 app_id: 7A614403-42B1-4596-G479-BJ779F21A65D
 publisher: Nim4a
-publisher_url: https://github.com/Nim4a/NiMiFy
+publisher_url: https://github.com/herbert-kara/NiMiFy-private
 display_name: NiMiFy
 create_desktop_icon: true
 install_dir_name: "{autopf64}\\NiMiFy"

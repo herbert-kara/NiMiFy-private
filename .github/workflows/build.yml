@@ -197,11 +197,13 @@ jobs:
 
       - name: prepare_release_message
         continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set +e 
           sed 's|RELEASE_TAG|${{ env.TAG_NAME }}|g' ./.github/release_message.md > release.md
           pip install gitchangelog pystache mustache markdown
-          prelease=$(curl --silent "https://api.github.com/repos/Nim4a/NiMiFy/releases/latest" | grep -Po '"tag_name": "\K([^"]*)') 
+          prelease=$(gh api "repos/$GITHUB_REPOSITORY/releases/latest" --jq .tag_name)
           echo -e "\n\n<details markdown=1><summary>All changes from $current to the latest commit:</summary>\n\n">>release.md
           gitchangelog "${prelease}.." >> release.md  2>&1 || echo "Error in gitchangelog"
           echo -e "\n\n</details>">>release.md

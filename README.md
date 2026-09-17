@@ -14,7 +14,7 @@ A multi-platform proxy client based on [Sing-box](https://github.com/SagerNet/si
 
 - ✅ Windows branding: `NiMiFy` (separate install dir, app identity, registry keys, mutex — no clash with an existing Hiddify install; both can coexist)
 - ✅ Windows-only build pipeline: fork's GitHub Actions builds only the Windows targets (exe installer / portable zip), no Android/iOS/macOS jobs, no store releases
-- ✅ All update/appcast/release URLs point at this fork — updates come from `Nim4a/NiMiFy` releases
+- ✅ All update/appcast/release URLs point at this fork — updates come from `herbert-kara/NiMiFy-private` releases
 - ✅ Simplified `make windows-libs`: downloads core with retry into `hiddify-core/bin/` (robust on flaky links)
 - ✅ Upstream bug-fix base: forked at commit `276a7ef` (v4.1.2 line)
 
@@ -24,7 +24,7 @@ VLESS, VMess, Reality, TUIC, Hysteria, Hysteria2, Shadowsocks, Trojan, WireGuard
 
 ## Windows download
 
-Get the installer from [Releases](https://github.com/Nim4a/NiMiFy/releases):
+Get the installer from [Releases](https://github.com/herbert-kara/NiMiFy-private/releases):
 
 - `NiMiFy-Windows-Setup-x64.exe` — Inno Setup installer
 - `NiMiFy-Windows-Portable-x64.zip` — portable, no install
@@ -33,7 +33,7 @@ Get the installer from [Releases](https://github.com/Nim4a/NiMiFy/releases):
 ## Build from source (Windows)
 
 ```bash
-git clone https://github.com/Nim4a/NiMiFy.git
+git clone https://github.com/herbert-kara/NiMiFy-private.git
 cd hiddify-app
 make windows-prepare   # pub get, build_runner, slang, downloads core libs
 make windows-release   # zip + exe + msix via fastforge
