@@ -6,6 +6,7 @@ import 'package:hiddify/core/localization/translations.dart';
 import 'package:hiddify/core/router/bottom_sheets/bottom_sheets_notifier.dart';
 import 'package:hiddify/features/home/widget/connection_button.dart';
 import 'package:hiddify/features/home/widget/home_bg_accent.dart';
+import 'package:hiddify/features/home/widget/pixel_background.dart';
 import 'package:hiddify/features/profile/notifier/active_profile_notifier.dart';
 import 'package:hiddify/features/profile/widget/profile_tile.dart';
 import 'package:hiddify/features/proxy/active/active_proxy_card.dart';
@@ -78,8 +79,15 @@ class HomePage extends HookConsumerWidget {
           const Gap(8),
         ],
       ),
-      body: Stack(
+      body: Listener(
+        behavior: HitTestBehavior.translucent,
+        onPointerDown: (_) => pixelTouched.value = true,
+        onPointerUp: (_) => pixelTouched.value = false,
+        onPointerCancel: (_) => pixelTouched.value = false,
+        child: Stack(
           children: [
+            // Floating pixel particles (restored from v4.1.3) behind the gradient + glow
+            const Positioned.fill(child: PixelBackgroundWidget()),
             // Dribbble-style background: charcoal gradient + status glow
             Positioned.fill(
               child: ValueListenableBuilder<Color>(
@@ -245,6 +253,8 @@ class AppVersionLabel extends HookConsumerWidget {
           version,
           textDirection: TextDirection.ltr,
           style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSecondaryContainer),
+        ),
+          ],
         ),
       ),
     );
