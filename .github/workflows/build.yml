@@ -239,8 +239,12 @@ jobs:
           echo "$HOME/.pub-cache/bin" >> $GITHUB_PATH
 
       - name: Prepare for ${{ matrix.platform }}
+        if: matrix.platform != 'macos-appstore' || inputs.upload-artifact
         env:
           CORE_TOKEN: ${{ secrets.CORE_REPO_TOKEN }}
+        run: |
+          make ${{ matrix.platform }}-prepare
+
       - name: Setup Android Signing Properties
         if: ${{ inputs.upload-artifact && startsWith(matrix.platform,'android') }}
         run: |
@@ -288,11 +292,6 @@ jobs:
 
 
 
-
-      - name: Prepare for ${{ matrix.platform }}
-        if: matrix.platform != 'macos-appstore' || inputs.upload-artifact
-        run: |
-          make ${{ matrix.platform }}-prepare
 
 
       - name: Build ${{ matrix.platform }}
@@ -351,7 +350,6 @@ jobs:
         shell: pwsh
         run: |
           make windows-exe-release
-          make windows-msix-release
 
       - name: Build the Mac App Store version
         if: matrix.platform == 'macos-appstore' && inputs.upload-artifact
@@ -423,20 +421,7 @@ jobs:
           }
           Get-ChildItem -Path out
           
-      - name: Copy to out Android
-
-      # SLSA build provenance for the Windows assets (verifiable with
-      # `gh attestation verify <file> --repo hiddify/hiddify-app`). Lets users and
-      # AV vendors confirm the files come from this public CI, which is what
-      # false-positive dispute forms ask for.
-      - name: Attest build provenance (Windows)
-        if: matrix.platform == 'windows' && inputs.upload-artifact
-        continue-on-error: true
-        uses: actions/attest-build-provenance@v4
-        with:
-          subject-path: out/*
-
-      # SLSA build provenance for the Windows assets (verifiable with
+            # SLSA build provenance for the Windows assets (verifiable with
       # `gh attestation verify <file> --repo hiddify/hiddify-app`). Lets users and
       # AV vendors confirm the files come from this public CI, which is what
       # false-positive dispute forms ask for.
@@ -471,28 +456,6 @@ jobs:
           cp ./build/app/outputs/flutter-apk/app-x86_64-release.apk out/NiMiFy-Android-x86_64.apk || echo no x64
           cp ./build/app/outputs/flutter-apk/app-release.apk out/NiMiFy-Android-universal.apk || echo no universal
           cp ./build/app/outputs/flutter-apk/app-debug.apk out/NiMiFy-Android-debug.apk || echo no debug
-
-      - name: Copy to out Android AAB
-        if: matrix.platform == 'android-aab'
-        run: |
-          mkdir out
-          ls -R ./build/app/outputs
-          cp ./build/app/outputs/bundle/release/app-release.aab out/hiddify-android-market.aab || echo "no aab"
-
-      - name: Check the macOS app icon
-        if: startsWith(matrix.platform, 'macos') && inputs.upload-artifact
-        # AppIcon.icon (Icon Composer) needs Xcode 26; older Xcode builds the app without any icon.
-        run: |
-          app=build/macos/Build/Products/Release/Hiddify.app
-          xcodebuild -version
-          for f in Assets.car AppIcon.icns; do
-            [[ -s "$app/Contents/Resources/$f" ]] || { echo "::error::$app has no Contents/Resources/$f (app icon)"; exit 1; }
-          done
-          /usr/libexec/PlistBuddy -c "Print :CFBundleIconName" "$app/Contents/Info.plist"
-          cp ./build/app/outputs/flutter-apk/*arm64-v8a*.apk out/${TARGET_NAME_apk}-arm64.apk || echo "no arm64 apk"
-          cp ./build/app/outputs/flutter-apk/*armeabi-v7a*.apk out/${TARGET_NAME_apk}-arm7.apk || echo "no arm7 apk"
-          cp ./build/app/outputs/flutter-apk/*x86_64*.apk out/${TARGET_NAME_apk}-x86_64.apk || echo "no x64 apk"
-          cp ./build/app/outputs/flutter-apk/app-release.apk out/${TARGET_NAME_apk}-universal.apk || echo "no universal apk"
 
       - name: Copy to out Android AAB
         if: matrix.platform == 'android-aab'
