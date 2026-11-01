@@ -15,6 +15,7 @@ import 'package:hiddify/features/connection/model/connection_failure.dart';
 import 'package:hiddify/features/connection/model/connection_status.dart';
 import 'package:hiddify/features/connection/notifier/connection_notifier.dart';
 import 'package:hiddify/features/home/widget/eclipse_button_painter.dart';
+import 'package:hiddify/features/home/widget/home_bg_accent.dart';
 import 'package:hiddify/features/profile/notifier/active_profile_notifier.dart';
 import 'package:hiddify/features/proxy/active/active_proxy_notifier.dart';
 import 'package:hiddify/features/proxy/model/connection_health.dart';
@@ -86,6 +87,22 @@ class ConnectionButton extends HookConsumerWidget {
 
     const buttonTheme = ConnectionButtonTheme.light;
     final today = DateTime.now();
+    final buttonColor = switch (look) {
+      _Look.connected when degraded => _degradedColor,
+      // the traffic waits for the chain hop: still on its way
+      _Look.connected when hopPending => const Color(0xFF455FE9),
+      _Look.connected => buttonTheme.connectedColor!,
+      _Look.noProxies => const Color.fromARGB(255, 185, 176, 103),
+      _Look.failed => Colors.red,
+      // the logo's own blue while the connection is on its way
+      _Look.connecting || _Look.waiting || _Look.hotReloading || _Look.disconnecting => const Color(0xFF455FE9),
+      _ => buttonTheme.idleColor!,
+    };
+    // mirror the status color to the home background glow; without this the
+    // background never leaves its idle look (the v5.3.0 merge dropped the writer).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (context.mounted) HomeBgAccent.of(context)?.value = buttonColor;
+    });
     return _ConnectionButton(
       look: look,
       onTap: onTap,
@@ -121,17 +138,7 @@ class ConnectionButton extends HookConsumerWidget {
           : null,
       onChain: showHealth,
       onLabel: degraded || hopPending ? showHealth : null,
-      buttonColor: switch (look) {
-        _Look.connected when degraded => _degradedColor,
-        // the traffic waits for the chain hop: still on its way
-        _Look.connected when hopPending => const Color(0xFF455FE9),
-        _Look.connected => buttonTheme.connectedColor!,
-        _Look.noProxies => const Color.fromARGB(255, 185, 176, 103),
-        _Look.failed => Colors.red,
-        // the logo's own blue while the connection is on its way
-        _Look.connecting || _Look.waiting || _Look.hotReloading || _Look.disconnecting => const Color(0xFF455FE9),
-        _ => buttonTheme.idleColor!,
-      },
+      buttonColor: buttonColor,
       image: switch (look) {
         _Look.connected || _Look.noProxies || _Look.hotReloading => Assets.images.connectNorouz,
         _ => Assets.images.disconnectNorouz,
