@@ -210,7 +210,6 @@ class BoxService(
                     return
                 }
             }
-            }
             status.postValue(Status.Started)
 
             if (Settings.startCoreAfterStartingService){
