@@ -22,8 +22,14 @@ sealed class ProfileEntity with _$ProfileEntity {
     required DateTime lastUpdate,
     ProfileOptions? options,
     SubscriptionInfo? subInfo,
+    // `profile-web-page-url` / `support-url` headers; independent of subInfo,
+    // which only exists when the `subscription-userinfo` header is present.
+    // Custom IP lookup uses `ipinfo-url` in [populatedHeaders] only.
+    String? webPageUrl,
+    String? supportUrl,
     Map<String, dynamic>? populatedHeaders,
     UserOverride? userOverride,
+    @Default(false) bool pinned,
   }) = RemoteProfileEntity;
 
   const factory ProfileEntity.local({
@@ -33,6 +39,7 @@ sealed class ProfileEntity with _$ProfileEntity {
     required DateTime lastUpdate,
     Map<String, dynamic>? populatedHeaders,
     UserOverride? userOverride,
+    @Default(false) bool pinned,
   }) = LocalProfileEntity;
 
   String profileOverride() =>
@@ -53,8 +60,6 @@ class SubscriptionInfo with _$SubscriptionInfo {
     required int download,
     required int total,
     required DateTime expire,
-    String? webPageUrl,
-    String? supportUrl,
   }) = _SubscriptionInfo;
 
   bool get isExpired => expire <= DateTime.now();
@@ -68,7 +73,19 @@ class SubscriptionInfo with _$SubscriptionInfo {
   double get remainingRatio => min(remaining.inDays, 30) / 30;
 }
 
-const int latestUserOverrideVersion = 1;
+const int latestUserOverrideVersion = 3;
+
+/// Per-profile preference for elevated admin_bgservice on Windows/Linux.
+enum UserAdminPreference {
+  /// Ask when optional admin is needed (Mode C).
+  unset,
+
+  /// Skip the dialog and use admin_bgservice.
+  preferAdmin,
+
+  /// Skip the dialog and continue without admin (strip privileged features).
+  preferNoAdmin,
+}
 
 @freezed
 abstract class UserOverride with _$UserOverride {
@@ -80,9 +97,20 @@ abstract class UserOverride with _$UserOverride {
     @Default(false) bool isAutoUpdateDisable,
     // hours
     int? updateInterval,
-    bool? enableWarp,
-    bool? enablePsiphon,
+
+    /// Single extra-security mode — `warp` or `psiphon`. They share one slot
+    /// because the core runs one chain mode at a time, mirroring the
+    /// `extra-security` subscription header.
+    String? extraSecurity,
+
+    /// Enables TLS fragmentation using the user's own configured size/sleep.
+    /// Unlike the `fragment` subscription header it carries no values, since
+    /// the user's settings already hold them.
     bool? enableFragment,
+
+    /// Windows/Linux: whether to prefer elevated admin_bgservice for privileged
+    /// proxy features. Subscription sync must not overwrite this field.
+    @Default(UserAdminPreference.unset) UserAdminPreference adminPreference,
   }) = _UserOverride;
 
   factory UserOverride.fromJson(Map<String, Object?> json) => _$UserOverrideFromJson(json);
@@ -101,8 +129,14 @@ abstract class UserOverride with _$UserOverride {
     final version = json['version'] as int? ?? 1;
 
     if (version < 2) {
-      // Migration 1 to 2
+      // v1 -> v2: the `enableWarp` / `enablePsiphon` booleans become a single
+      // `extraSecurity` mode, since only one chain mode can run. Psiphon wins
+      // when both were on, matching v1 behaviour where it overrode warp.
+      if (json.remove('enableWarp') == true) json['extraSecurity'] = 'warp';
+      if (json.remove('enablePsiphon') == true) json['extraSecurity'] = 'psiphon';
     }
+    // v2 -> v3: add adminPreference (defaults to unset).
+    json['adminPreference'] ??= 'unset';
     json['version'] = latestUserOverrideVersion;
     return json;
   }

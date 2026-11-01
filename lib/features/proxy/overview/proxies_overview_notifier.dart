@@ -1,19 +1,22 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:dartx/dartx.dart';
 
 import 'package:hiddify/core/haptic/haptic_service.dart';
 import 'package:hiddify/core/localization/translations.dart';
+import 'package:hiddify/core/notification/in_app_notification_controller.dart';
 import 'package:hiddify/core/preferences/preferences_provider.dart';
 import 'package:hiddify/core/utils/preferences_utils.dart';
 import 'package:hiddify/features/connection/notifier/connection_notifier.dart';
 import 'package:hiddify/features/proxy/data/proxy_data_providers.dart';
-import 'package:hiddify/features/proxy/model/proxy_failure.dart';
 import 'package:hiddify/hiddifycore/generated/v2/hcore/hcore.pb.dart';
+import 'package:hiddify/hiddifycore/init_signal.dart';
 
 import 'package:hiddify/utils/riverpod_utils.dart';
 import 'package:hiddify/utils/utils.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:rxdart/rxdart.dart';
 
 part 'proxies_overview_notifier.g.dart';
 
@@ -60,38 +63,53 @@ class ProxiesOverviewNotifier extends _$ProxiesOverviewNotifier with AppLogger {
   Stream<OutboundGroup?> build() {
     ref.disposeDelay(const Duration(seconds: 15));
     final serviceRunning = ref.watch(serviceRunningProvider);
-    if (!serviceRunning) {
-      return Stream.error(const ServiceNotRunning());
-    }
+    // Set up again when the app comes back from the background, on a new gRPC
+    // channel; the stream below lives on the old one.
+    ref.watch(coreRestartSignalProvider);
     final sortBy = ref.watch(proxiesSortNotifierProvider);
-    // yield* ref
-    //     .watch(proxyRepositoryProvider)
-    //     .watchProxies()
-    //     .throttleTime(
-    //       const Duration(milliseconds: 100),
-    //       leading: false,
-    //       trailing: true,
-    //     )
-    //     .map(
-    //       (event) => event.getOrElse(
-    //         (err) {
-    //           loggy.warning("error receiving proxies", err);
-    //           throw err;
-    //         },
-    //       ),
-    //     )
-    //     .asyncMap((proxies) async => _sortOutbounds(proxies, sortBy));
+    // Reopening the stream also runs build, and that must not drop the pin.
+    if (serviceRunning != _lastServiceRunning || sortBy != _lastSortBy) {
+      _lastServiceRunning = serviceRunning;
+      _lastSortBy = sortBy;
+      _pinned = null;
+      _resubscribeDelay = _minResubscribeDelay;
+    }
+    if (!serviceRunning) {
+      // Empty data (not Stream.error / not loading): the page shows "Connect to see proxies".
+      return Stream.value(null);
+    }
+    Timer? resubscribe;
+    ref.onDispose(() => resubscribe?.cancel());
     return ref
         .watch(proxyRepositoryProvider)
         .watchProxies()
+        // Log failures but still emit null so the page leaves the spinner. Filtering them
+        // out left AsyncLoading forever when gRPC never delivered a good event.
         .map(
-          (event) => event.getOrElse((err) {
+          (event) => event.fold((err) {
             loggy.warning("error receiving proxies", err);
-            throw err;
-          }),
+            return null;
+          }, (group) => group),
         )
+        .startWith(null)
+        .doOnData((_) => _resubscribeDelay = _minResubscribeDelay)
+        .doOnDone(() {
+          // gRPC ends the stream when its connection drops, e.g. once iOS suspends the app.
+          // While reopening keeps failing the wait doubles, as for the active proxy.
+          loggy.debug("proxies stream ended, resubscribing in $_resubscribeDelay");
+          resubscribe = Timer(_resubscribeDelay, ref.invalidateSelf);
+          final doubled = _resubscribeDelay * 2;
+          _resubscribeDelay = doubled < _maxResubscribeDelay ? doubled : _maxResubscribeDelay;
+        })
         .asyncMap((proxies) async => await _sortOutbounds(proxies, sortBy));
   }
+
+  bool? _lastServiceRunning;
+  ProxiesSort? _lastSortBy;
+
+  static const _minResubscribeDelay = Duration(seconds: 2);
+  static const _maxResubscribeDelay = Duration(seconds: 30);
+  Duration _resubscribeDelay = _minResubscribeDelay;
 
   // Future<List<OutboundGroup>> _sortOutbounds(
   //   List<OutboundGroup> proxies,
@@ -136,6 +154,9 @@ class ProxiesOverviewNotifier extends _$ProxiesOverviewNotifier with AppLogger {
   //   return sortedProxies;
   // }
 
+  /// The proxy picked on this page and the row it was in. Cleared by a new connection or sort.
+  ({String tag, int index})? _pinned;
+
   Future<OutboundGroup?> _sortOutbounds(OutboundGroup? proxies, ProxiesSort sortBy) async {
     if (proxies == null) return null;
 
@@ -163,13 +184,13 @@ class ProxiesOverviewNotifier extends _$ProxiesOverviewNotifier with AppLogger {
         return (b.upload + b.download).compareTo(a.upload + a.download);
       }),
     };
-    final items = <OutboundInfo>[];
-    for (final item in sortedItems) {
-      // if (groupWithSelected.keys.contains(item.tag)) {
-      //   items.add(item.copyWith(selectedTag: groupWithSelected[item.tag]));
-      // } else {
-      items.add(item);
-      // }
+    // a copy: sortedItems reads proxies.items, which is cleared below
+    final items = sortedItems.toList();
+    // The proxy the user picked stays in the row they tapped, and the rest sorts around it. A new
+    // ping used to move it, often to the end of the list, right after the tap.
+    if (_pinned case (:final tag, :final index) when proxies.selected == tag) {
+      final picked = items.indexWhere((item) => item.tag == tag);
+      if (picked != -1) items.insert(min(index, items.length - 1), items.removeAt(picked));
     }
     proxies.items.clear();
     proxies.items.addAll(items);
@@ -205,10 +226,21 @@ class ProxiesOverviewNotifier extends _$ProxiesOverviewNotifier with AppLogger {
     if (!state.hasValue) return;
     final outbounds = state.value!;
     await ref.read(hapticServiceProvider.notifier).lightImpact();
-    await ref.read(proxyRepositoryProvider).selectProxy(groupTag, outboundTag).getOrElse((err) {
-      loggy.warning("error selecting outbound", err);
-      throw err;
-    }).run();
+    final selected = await ref
+        .read(proxyRepositoryProvider)
+        .selectProxy(groupTag, outboundTag)
+        .map((_) => true)
+        .getOrElse((err) {
+          loggy.warning("error selecting outbound", err);
+          // thrown from a tap, the error reached no one and the tap seemed ignored
+          final t = ref.read(translationsProvider).requireValue;
+          ref.read(inAppNotificationControllerProvider).showErrorToast(t.pages.proxies.switchFailed);
+          return false;
+        })
+        .run();
+    if (!selected) return;
+    final row = outbounds.items.indexWhere((e) => e.tag == outboundTag);
+    if (row != -1) _pinned = (tag: outboundTag, index: row);
     final newselected = outbounds.items.where((e) => e.tag == outboundTag).firstOrNull;
     if (newselected != null) {
       newselected.isSelected = true;

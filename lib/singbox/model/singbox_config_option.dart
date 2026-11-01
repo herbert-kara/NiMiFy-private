@@ -19,6 +19,7 @@ class SingboxConfigOption with _$SingboxConfigOption {
     required BalancerStrategy balancerStrategy,
     // required bool blockAds,
     required bool useXrayCoreWhenPossible,
+    @Default(true) bool useSystemTlsEngine,
     required bool executeConfigAsIs,
     required LogLevel logLevel,
     required bool resolveDestination,
@@ -39,6 +40,8 @@ class SingboxConfigOption with _$SingboxConfigOption {
     required int mtu,
     required bool strictRoute,
     required String connectionTestUrl,
+    /// Subscription `ipinfo-url` override — custom ipapi-compatible geolocation endpoint.
+    String? ipinfoUrl,
     @IntervalInSecondsConverter() required Duration urlTestInterval,
     required bool enableClashApi,
     required int clashApiPort,

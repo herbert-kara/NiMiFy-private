@@ -75,8 +75,9 @@ set(INSTALL_BUNDLE_LIB_DIR "${CMAKE_INSTALL_PREFIX}")
 install(TARGETS ${BINARY_NAME} RUNTIME DESTINATION "${CMAKE_INSTALL_PREFIX}"
   COMPONENT Runtime)
 
+# Renamed from icudtl.dat: see the DartProject construction in runner/main.cpp.
 install(FILES "${FLUTTER_ICU_DATA_FILE}" DESTINATION "${INSTALL_BUNDLE_DATA_DIR}"
-  COMPONENT Runtime)
+  RENAME "icudtl.bin" COMPONENT Runtime)
 
 install(FILES "${FLUTTER_LIBRARY}" DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"
   COMPONENT Runtime)
@@ -94,6 +95,10 @@ COMPONENT Runtime RENAME libcronet.dll)
 # - not needed for in-process core (proxy / system-proxy modes)
 # - it is the #1 Defender false-positive magnet breaking installs
 # - TUN-via-service mode is disabled in this fork
+
+# Elevation helper (requireAdministrator manifest) used to install the VPN service.
+install(FILES "../hiddify-core/bin/HiddifyAdmin.exe" DESTINATION "${CMAKE_INSTALL_PREFIX}"
+COMPONENT Runtime RENAME HiddifyAdmin.exe)
 
 
 if(PLUGIN_BUNDLED_LIBRARIES)

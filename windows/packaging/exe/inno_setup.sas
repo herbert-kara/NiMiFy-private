@@ -11,13 +11,35 @@ DisableProgramGroupPage=yes
 OutputDir=.
 OutputBaseFilename={{OUTPUT_BASE_FILENAME}}
 Compression=lzma
-SolidCompression=yes
+; Non-solid: slightly larger, but less "packed dropper" heuristic noise on AV/VT.
+SolidCompression=no
 SetupIconFile={{SETUP_ICON_FILE}}
 WizardStyle=modern
 PrivilegesRequired={{PRIVILEGES_REQUIRED}}
 ArchitecturesAllowed=x64
 ArchitecturesInstallIn64BitMode=x64
+; Closes locked app binaries before file replace — prefer this over taskkill.exe heuristics.
 CloseApplications=force
+; VERSIONINFO for Setup.exe and the embedded uninstaller. PE files without a
+; CompanyName/ProductName resource are an "unknown dropper" signal for AV engines.
+VersionInfoCompany={{PUBLISHER_NAME}}
+VersionInfoDescription={{DISPLAY_NAME}} Setup
+VersionInfoProductName={{DISPLAY_NAME}}
+VersionInfoTextVersion={{APP_VERSION}}
+VersionInfoCopyright=Copyright (C) {{PUBLISHER_NAME}}
+AppCopyright=Copyright (C) {{PUBLISHER_NAME}}
+; Settings > Apps / Add or Remove Programs entry: plain name + the app icon
+; (Store policy 10.2.7 rejects a blank or unrelated name or publisher).
+UninstallDisplayName={{DISPLAY_NAME}}
+UninstallDisplayIcon={app}\{{EXECUTABLE_NAME}}
+; CI (windows/scripts/configure_windows_signing.ps1) registers the "hiddifysign"
+; Sign Tool and sets HIDDIFY_INNO_SIGNTOOL, so the compiler signs Setup.exe *and*
+; unins000.exe. An unsigned uninstaller dropped into Program Files is one of the
+; VirusTotal sandbox hits ("Sysmon File Executable Creation" Sigma rule).
+#if GetEnv("HIDDIFY_INNO_SIGNTOOL") == "hiddifysign"
+SignTool=hiddifysign
+SignedUninstaller=yes
+#endif
 
 [Languages]
 {% for locale in LOCALES %}
@@ -66,12 +88,70 @@ Filename: "{app}\\{{EXECUTABLE_NAME}}"; Description: "{cm:LaunchProgram,{{DISPLA
 Type: filesandordirs; Name: "{userappdata}\NiMiFy"
 
 [Code]
-function InitializeSetup(): Boolean;
+// Stop/remove services via the Service Control Manager API.
+// Do not shell out to net.exe / taskkill.exe / sc.exe — those command lines match
+// common Sigma rules and drive VirusTotal sandbox false positives.
+
+type
+  TServiceStatus = record
+    dwServiceType: DWORD;
+    dwCurrentState: DWORD;
+    dwControlsAccepted: DWORD;
+    dwWin32ExitCode: DWORD;
+    dwServiceSpecificExitCode: DWORD;
+    dwCheckPoint: DWORD;
+    dwWaitHint: DWORD;
+  end;
+
+const
+  SC_MANAGER_CONNECT = $0001;
+  SERVICE_QUERY_STATUS = $0004;
+  SERVICE_STOP = $0020;
+  SERVICE_CONTROL_STOP = $0001;
+  DELETE_ACCESS = $10000;
+
+function OpenSCManager(lpMachineName, lpDatabaseName: string; dwDesiredAccess: DWORD): THandle;
+  external 'OpenSCManagerW@advapi32.dll stdcall';
+function OpenService(hSCManager: THandle; lpServiceName: string; dwDesiredAccess: DWORD): THandle;
+  external 'OpenServiceW@advapi32.dll stdcall';
+function ControlService(hService: THandle; dwControl: DWORD; var lpServiceStatus: TServiceStatus): Boolean;
+  external 'ControlService@advapi32.dll stdcall';
+function DeleteService(hService: THandle): Boolean;
+  external 'DeleteService@advapi32.dll stdcall';
+function CloseServiceHandle(hSCObject: THandle): Boolean;
+  external 'CloseServiceHandle@advapi32.dll stdcall';
+
+procedure StopServiceByName(const ServiceName: string; const Remove: Boolean);
 var
-  ResultCode: Integer;
+  hSCM, hService: THandle;
+  Access: DWORD;
+  Status: TServiceStatus;
 begin
-  Exec('taskkill', '/F /IM NiMiFy.exe', '', SW_HIDE, ewWaitUntilTerminated, ResultCode)
-  Exec('net', 'stop "NiMiFyTunnelService"', '', SW_HIDE, ewWaitUntilTerminated, ResultCode)
-  Exec('sc.exe', 'delete "NiMiFyTunnelService"', '', SW_HIDE, ewWaitUntilTerminated, ResultCode)
+  hSCM := OpenSCManager('', '', SC_MANAGER_CONNECT);
+  if hSCM = 0 then
+    Exit;
+
+  Access := SERVICE_STOP or SERVICE_QUERY_STATUS;
+  if Remove then
+    Access := Access or DELETE_ACCESS;
+
+  hService := OpenService(hSCM, ServiceName, Access);
+  if hService <> 0 then
+  begin
+    ControlService(hService, SERVICE_CONTROL_STOP, Status);
+    if Remove then
+      DeleteService(hService);
+    CloseServiceHandle(hService);
+  end;
+
+  CloseServiceHandle(hSCM);
+end;
+
+function InitializeSetup(): Boolean;
+begin
+  // Current elevated core service — stop only so binaries can be replaced on upgrade.
+  StopServiceByName('NiMiFyAdminBG', False);
+  // Legacy name from older builds — stop and remove if still present.
+  StopServiceByName('NiMiFyTunnelService', True);
   Result := True;
 end;

@@ -146,6 +146,7 @@ macos-install-deps:
 	brew install create-dmg tree 
 	npm install -g appdmg
 	dart pub global activate fastforge
+macos-appstore-install-deps: macos-install-deps
 
 ios-install-deps: 
 	if [ "$(flutter)" = "true" ]; then \
@@ -286,8 +287,20 @@ android-aab-release:
 	  --build-dart-define=sentry_dsn=$(SENTRY_DSN) \
 	  --build-dart-define=release=google-play
 
+# fastforge runs `flutter build windows` itself before packing, which re-copies fresh
+# (unsigned) plugin DLLs over the signed Release tree. The pre-package hook signs the
+# tree again right before Inno Setup / msix read it, so every PE inside Setup.exe, the
+# MSIX and the portable zip carries a signature. WINDOWS_SIGN_BACKEND is exported by
+# windows/scripts/configure_windows_signing.ps1 (CI only; local builds stay unsigned).
+ifneq ($(WINDOWS_SIGN_BACKEND),)
+WINDOWS_PACKAGE_HOOK=--hook-pre=windows/scripts/sign_release_tree.sh
+endif
+
+# msix needs windows\sign.pfx, which we don't have — Setup + zip only.
 windows-release: windows-zip-release windows-exe-release
-# msix target available manually: make windows-msix-release (needs windows\sign.pfx)
+
+windows-validate:
+	flutter build windows --release --target $(TARGET) $(BUILD_ARGS)
 
 windows-zip-release:
 	fastforge package \
@@ -296,7 +309,9 @@ windows-zip-release:
 	  --skip-clean \
 	  --build-target=$(TARGET) \
 	  --build-dart-define=sentry_dsn=$(SENTRY_DSN) \
-	  --build-dart-define=portable=true
+	  --build-dart-define=portable=true \
+	  $(WINDOWS_PACKAGE_HOOK)
+# 	repacking needs Windows' own tar.exe: GNU tar from Git Bash ignores -a for .zip and writes a plain tar
 	@FULL_PATH=$$(ls dist/*/*.zip | head -n 1); \
 	ZIP_DIR=$$(dirname "$$FULL_PATH"); \
 	ZIP_FILE=$$(basename "$$FULL_PATH"); \
@@ -307,7 +322,11 @@ windows-zip-release:
 	mkdir -p Hiddify; \
 	unzip -q "$$ZIP_FILE" -d Hiddify/; \
 	rm "$$ZIP_FILE"; \
-	tar -a -cf "$$FILE_NAME.zip" Hiddify; \
+	if command -v 7z > /dev/null 2>&1; then \
+	  7z a -tzip -bso0 -bsp0 "$$FILE_NAME.zip" Hiddify; \
+	else \
+	  pwsh -NoProfile -Command "Compress-Archive -Path Hiddify -DestinationPath '$$FILE_NAME.zip' -Force"; \
+	fi; \
 	rm -rf Hiddify; \
 	$(GREEN)Successful$(DONE)
 
@@ -317,7 +336,8 @@ windows-exe-release:
 	  --targets exe \
 	  --skip-clean \
 	  --build-target=$(TARGET) \
-	  --build-dart-define=sentry_dsn=$(SENTRY_DSN)
+	  --build-dart-define=sentry_dsn=$(SENTRY_DSN) \
+	  $(WINDOWS_PACKAGE_HOOK)
 
 windows-msix-release:
 	fastforge package \
@@ -325,7 +345,8 @@ windows-msix-release:
 	  --targets msix \
 	  --skip-clean \
 	  --build-target=$(TARGET) \
-	  --build-dart-define=sentry_dsn=$(SENTRY_DSN)
+	  --build-dart-define=sentry_dsn=$(SENTRY_DSN) \
+	  $(WINDOWS_PACKAGE_HOOK)
 
 linux-release: linux-deb-release linux-appimage-release
 
@@ -386,7 +407,7 @@ linux-appimage-release:
 	$(BLUE)Replacing AppRun$(DONE); \
 	cp ../../linux/packaging/appimage/AppRun squashfs-root/AppRun; \
 	$(BLUE)Granting permissions$(DONE); \
-	chmod +x squashfs-root/AppRun; \
+	chmod -R a+rX squashfs-root && chmod a+rx squashfs-root/AppRun; \
 	$(BLUE)Adding StartupWMClass to hiddify.desktop$(DONE); \
 	sed -i '/^\[Desktop Entry\]/a StartupWMClass=app.hiddify.com' "squashfs-root/hiddify.desktop"; \
 	$(BLUE)Removing old AppImage$(DONE); \
@@ -394,7 +415,7 @@ linux-appimage-release:
 	$(BLUE)Deleting bundled libstdc++ to fix Arch Linux compatibility...$(DONE); \
 	find squashfs-root/usr/lib -name "libstdc++.so.6" -delete; \
 	$(BLUE)Rebuilding AppImage$(DONE); \
-	ARCH=x86_64 appimagetool --no-appstream squashfs-root Hiddify.AppImage > /dev/null; \
+	ARCH=x86_64 appimagetool --no-appstream squashfs-root Hiddify.AppImage > /dev/null || exit 1; \
 	$(BLUE)Cleaning up squashfs$(DONE); \
 	rm -rf squashfs-root; \
 	$(YELLOW)Creating Portable Package$(DONE); \
@@ -467,6 +488,12 @@ macos-release:
 ios-release: #not tested
 	fastforge package --platform ios --targets ipa --build-export-options-plist  ios/exportOptions.plist $(DISTRIBUTOR_ARGS)
 
+ios-validate:
+	flutter build ios --release --no-codesign --target $(TARGET) $(BUILD_ARGS)
+
+ios-simulator-validate:
+	flutter build ios --simulator --debug --target $(TARGET) $(BUILD_ARGS)
+
 android-libs:
 	$(MKDIR) $(ANDROID_OUT) || echo Folder already exists. Skipping...
 	curl -sfL --retry 3 -H "Authorization: Bearer $(CORE_TOKEN)" -H "Accept: application/octet-stream" \
@@ -513,8 +540,13 @@ linux-arm64-musl-libs:
 
 
 macos-libs:
-	mkdir -p  $(DESKTOP_OUT) 
+	mkdir -p $(DESKTOP_OUT) macos/Frameworks
 	curl -L $(CORE_URL)/$(CORE_NAME)-macos.tar.gz | tar xz -C $(DESKTOP_OUT)
+	# Tunnel bind ships in the same tarball (built by hiddify-core `make macos`).
+	test -d $(DESKTOP_OUT)/HiddifyTunnelCore.xcframework
+	rm -rf macos/Frameworks/HiddifyTunnelCore.xcframework
+	mv $(DESKTOP_OUT)/HiddifyTunnelCore.xcframework macos/Frameworks/
+	touch macos/Frameworks/HiddifyTunnelCore.xcframework/.downloaded
 
 ios-libs: #not tested
 	mkdir -p $(IOS_OUT)
@@ -541,6 +573,37 @@ build-linux-libs:
 
 build-macos-libs:
 	make -C hiddify-core -f Makefile macos
+	test -d hiddify-core/bin/HiddifyTunnelCore.xcframework
+	mkdir -p macos/Frameworks
+	rm -rf macos/Frameworks/HiddifyTunnelCore.xcframework
+	cp -R hiddify-core/bin/HiddifyTunnelCore.xcframework macos/Frameworks/
+
+# Native arch only (no lipo, no HiddifyTunnelCore.xcframework).
+build-lite-macos-libs:
+	make -C hiddify-core -f Makefile macos-lite
+
+# Runs Debug from /Applications, where macOS allows the VPN system extension.
+macos-run-dev:
+	bash macos/scripts/run-dev.sh
+
+# macOS releases built on this Mac; see macos/scripts/dist.sh.
+macos-dist-unsigned:
+	bash macos/scripts/dist.sh unsigned $(DISTRIBUTOR_ARGS)
+
+macos-dist-developer-id:
+	bash macos/scripts/dist.sh developer-id $(DISTRIBUTOR_ARGS)
+
+macos-dist-appstore:
+	bash macos/scripts/dist.sh app-store
+
+macos-appstore-upload:
+	bash macos/scripts/dist.sh app-store --upload
+
+# CI builds the Mac App Store pkg + dmg; MACOS_APPSTORE_ARGS=--upload sends the pkg to TestFlight.
+macos-appstore-prepare: macos-prepare
+
+macos-appstore-release:
+	bash macos/scripts/dist.sh app-store $(MACOS_APPSTORE_ARGS)
 
 build-ios-libs: 
 	rm -rf $(IOS_OUT)/HiddifyCore.xcframework 
@@ -557,4 +620,4 @@ ios-temp-prepare:
 	flutter build ios-framework
 	cd ios
 	pod install
-	
+

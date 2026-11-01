@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:dartx/dartx.dart';
 import 'package:flutter/material.dart';
 import 'package:hiddify/core/haptic/haptic_service.dart';
@@ -6,9 +8,9 @@ import 'package:hiddify/core/preferences/general_preferences.dart';
 import 'package:hiddify/core/router/dialog/dialog_notifier.dart';
 import 'package:hiddify/features/auto_start/notifier/auto_start_notifier.dart';
 import 'package:hiddify/features/common/general_pref_tiles.dart';
-import 'package:hiddify/features/log/model/log_level.dart';
 import 'package:hiddify/features/settings/data/config_option_repository.dart';
 import 'package:hiddify/features/settings/widget/preference_tile.dart';
+import 'package:hiddify/hiddifycore/core_interface/core_interface_mobile.dart';
 import 'package:hiddify/utils/utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:humanizer/humanizer.dart';
@@ -46,6 +48,16 @@ class GeneralPage extends HookConsumerWidget {
               onChanged: ref.read(hapticServiceProvider.notifier).updatePreference,
             ),
           ],
+          if (PlatformUtils.isIOS)
+            SwitchListTile.adaptive(
+              title: Text(t.pages.settings.general.alwaysOnVpn),
+              secondary: const Icon(Icons.vpn_lock_rounded),
+              value: ref.watch(Preferences.alwaysOnVpn),
+              onChanged: (value) async {
+                await ref.read(Preferences.alwaysOnVpn.notifier).update(value);
+                await CoreInterfaceMobile.methodChannel.invokeMethod("set_always_on", value);
+              },
+            ),
           if (PlatformUtils.isDesktop) ...[
             const ClosingPrefTile(),
             SwitchListTile.adaptive(
@@ -71,26 +83,9 @@ class GeneralPage extends HookConsumerWidget {
             value: !ref.watch(Preferences.disableMemoryLimit),
             onChanged: (value) async => await ref.read(Preferences.disableMemoryLimit.notifier).update(!value),
           ),
-          SwitchListTile.adaptive(
-            title: Text(t.pages.settings.general.debugMode),
-            secondary: const Icon(Icons.bug_report_rounded),
-            value: ref.watch(debugModeNotifierProvider),
-            onChanged: (value) async {
-              if (value)
-                await ref
-                    .read(dialogNotifierProvider.notifier)
-                    .showOk(t.pages.settings.general.debugMode, t.pages.settings.general.debugModeMsg);
-              await ref.read(debugModeNotifierProvider.notifier).update(value);
-            },
-          ),
-          ChoicePreferenceWidget(
-            selected: ref.watch(ConfigOptions.logLevel),
-            preferences: ref.watch(ConfigOptions.logLevel.notifier),
-            choices: LogLevel.choices,
-            title: t.pages.settings.general.logLevel,
-            icon: Icons.description_rounded,
-            presentChoice: (value) => value.name.toUpperCase(),
-          ),
+          // Debug mode and log level moved to the Logs page. Both decide how
+          // much is recorded, which is only meaningful next to the logs
+          // themselves — and next to the filters that decide what is shown.
           ValuePreferenceWidget(
             value: ref.watch(ConfigOptions.connectionTestUrl),
             preferences: ref.watch(ConfigOptions.connectionTestUrl.notifier),
@@ -133,6 +128,14 @@ class GeneralPage extends HookConsumerWidget {
             value: ref.watch(ConfigOptions.useXrayCoreWhenPossible),
             onChanged: ref.read(ConfigOptions.useXrayCoreWhenPossible.notifier).update,
           ),
+          if (Platform.isMacOS || Platform.isIOS || Platform.isWindows)
+            SwitchListTile.adaptive(
+              title: Text(t.pages.settings.general.useSystemTlsEngine),
+              subtitle: Text(t.pages.settings.general.useSystemTlsEngineMsg),
+              secondary: const Icon(Icons.verified_user_rounded),
+              value: ref.watch(ConfigOptions.useSystemTlsEngine),
+              onChanged: ref.read(ConfigOptions.useSystemTlsEngine.notifier).update,
+            ),
         ],
       ),
     );

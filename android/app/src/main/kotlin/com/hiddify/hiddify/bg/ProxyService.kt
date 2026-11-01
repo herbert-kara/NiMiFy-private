@@ -18,4 +18,6 @@ class ProxyService :
     override fun sendNotification(notification: Notification?) {
         if (notification != null) service.sendNotification(notification)
     }
+
+    override fun cancelNotification(identifier: String, typeID: Int) = service.cancelNotification(identifier, typeID)
 }

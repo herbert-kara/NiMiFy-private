@@ -219,14 +219,16 @@ const Map<String, Map<String, Map<String, dynamic>>> exampleSchemaValues = {
     },
   },
   "config.outbounds.tls": {
-    "fragment": {
-      "tls_fragment": {"enabled": true, "size": "1-10", "sleep": "1-10"},
-    },
+    "fragment": {"fragment": true},
     "utls": {
       "utls": {"enabled": true, "fingerprint": "chrome"},
     },
   },
   "config.outbounds": {
+    "tls fragment (dialer)": {
+      "tcp_fast_open": false,
+      "tls_fragment": {"enabled": true, "size": "1-10", "sleep": "1-10"},
+    },
     "multiplex": {
       "multiplex": {
         "enabled": true,
@@ -258,7 +260,7 @@ const Map<String, Map<String, Map<String, dynamic>>> exampleSchemaValues = {
         "alpn": [],
         "min_version": "",
         "max_version": "",
-        "tls_fragment": {"enabled": false, "size": "1-10", "sleep": "1-10"},
+        "fragment": false,
       },
     },
     "websocket": {
@@ -359,7 +361,7 @@ const Map<String, List<String>> possibleValues = {
     "naive",
     "anytls",
   ],
-  "config.endpoints.type": <String>["wireguard", "warp"],
+  "config.endpoints.type": <String>["wireguard", "awg", "warp"],
 };
 
 /// Edit your JSON object with this Widget. Create, edit and format objects
@@ -1300,7 +1302,9 @@ class _ReplaceTextWithFieldState extends State<_ReplaceTextWithField> {
   @override
   Widget build(BuildContext context) {
     if (possibleValues.containsKey(widget.keyPath)) {
-      final options = possibleValues[widget.keyPath]!;
+      final known = possibleValues[widget.keyPath]!;
+      // A value the list doesn't know must still be an item, or DropdownButton asserts.
+      final options = known.contains(_text) ? known : [_text, ...known];
       return Row(
         mainAxisSize: MainAxisSize.min,
         children: [
