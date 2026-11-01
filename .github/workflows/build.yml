@@ -259,7 +259,8 @@ jobs:
       # docs/windows-code-signing.md for the secrets and the backend choice
       # (Azure Artifact Signing preferred, CA-issued PFX as fallback).
       - name: Configure Windows code signing
-        if: ${{ inputs.upload-artifact && startsWith(matrix.platform,'windows') }}
+        # No signing secrets in this fork — script exits 0 and leaves the build unsigned.
+        if: ${{ false }}
         shell: pwsh
         env:
           AZURE_SIGNING_ENDPOINT: ${{ secrets.AZURE_SIGNING_ENDPOINT }}
