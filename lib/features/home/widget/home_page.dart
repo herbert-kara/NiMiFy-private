@@ -86,8 +86,6 @@ class HomePage extends HookConsumerWidget {
         onPointerCancel: (_) => pixelTouched.value = false,
         child: Stack(
           children: [
-            // Floating pixel particles (restored from v4.1.3) behind the gradient + glow
-            const Positioned.fill(child: PixelBackgroundWidget()),
             // Dribbble-style background: charcoal gradient + status glow
             Positioned.fill(
               child: ValueListenableBuilder<Color>(
@@ -100,6 +98,9 @@ class HomePage extends HookConsumerWidget {
                 },
               ),
             ),
+            // Floating pixel particles (restored from v4.1.3) drawn on top of
+            // the gradient so they stay visible
+            const Positioned.fill(child: PixelBackgroundWidget()),
             Center(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 600),
