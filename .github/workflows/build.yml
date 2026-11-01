@@ -75,6 +75,9 @@ jobs:
       id-token: write
       attestations: write
     continue-on-error: ${{ matrix.platform != 'ios' }}
+    env:
+      # secrets can't appear in if: — proxy through env to skip sentry upload.
+      SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
 
     strategy:
       fail-fast: false
@@ -426,9 +429,8 @@ jobs:
 
       - name: Upload Debug Symbols
         # No Sentry secrets in this fork — sentry-cli 404s and fails the release.
-        if: ${{ inputs.upload-artifact && inputs.tag-name != 'draft' && secrets.SENTRY_AUTH_TOKEN != '' }}
+        if: ${{ inputs.upload-artifact && inputs.tag-name != 'draft' && env.SENTRY_AUTH_TOKEN != '' }}
         env:
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
           SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
           SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
           SENTRY_DIST: ${{ matrix.platform == 'android-aab' && 'google-play' || 'general' }}
