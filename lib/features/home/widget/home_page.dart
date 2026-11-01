@@ -184,6 +184,7 @@ class HomePage extends HookConsumerWidget {
                 ),
               ),
           ],
+        ),
       ),
       ),
     );
@@ -253,8 +254,6 @@ class AppVersionLabel extends HookConsumerWidget {
           version,
           textDirection: TextDirection.ltr,
           style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSecondaryContainer),
-        ),
-          ],
         ),
       ),
     );
