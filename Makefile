@@ -496,17 +496,11 @@ ios-simulator-validate:
 
 android-libs:
 	$(MKDIR) $(ANDROID_OUT) || echo Folder already exists. Skipping...
-	curl -sfL --retry 3 -H "Authorization: Bearer $(CORE_TOKEN)" -H "Accept: application/octet-stream" \
-	  "https://api.github.com/repos/Nim4a/hiddify-core-private/releases/assets/560503907" \
-	  -o core-android.tar.gz && tar xz -f core-android.tar.gz -C $(ANDROID_OUT)/
+	curl -sfL --retry 3 $(CORE_URL)/$(CORE_NAME)-android.tar.gz | tar xz -C $(ANDROID_OUT)/
 
-# Android app code tracks hiddify-core main (draft): gomobile Mobile.setup bindings
-# must match the app's generated protos. The stable v4.1.0 android core crashes on
-# connect (native), while upstream draft APK pairs app~main with core draft.
-# Windows keeps the pinned stable core (verified working).
-# Asset 560503907 = draft release 'hiddify-lib-android.tar.gz' (hiddify-core.aar).
-# The github.com/releases/download URL 404s for private repos even with a token;
-# the api.github.com asset endpoint with Accept: octet-stream is the only path that works.
+# Android uses the PUBLIC upstream core release matching dependencies.properties
+# (v5.3.0): the app's committed Kotlin bindings now match that core, and the old
+# private draft AAR (core main from the v4.1.x era) lacks the new libbox classes.
 
 android-apk-libs: android-libs
 android-aab-libs: android-libs

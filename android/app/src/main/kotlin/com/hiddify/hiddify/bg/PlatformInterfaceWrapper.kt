@@ -34,8 +34,6 @@ import com.hiddify.core.libbox.NeighborUpdateListener
 import com.hiddify.core.libbox.PlatformUser
 import com.hiddify.core.libbox.ShellSession
 import com.hiddify.core.libbox.LocalDNSTransport
-import com.hiddify.core.libbox.NeighborUpdateListener
-import com.hiddify.core.libbox.Notification
 import java.security.KeyStore
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
@@ -159,18 +157,6 @@ interface PlatformInterfaceWrapper : PlatformInterface {
     override fun readWIFIState(): WIFIState? = null
 
     override fun localDNSTransport(): LocalDNSTransport? = LocalResolver
-
-    override fun registerMyInterface(name: String?) {
-    }
-
-    override fun sendNotification(notification: Notification?) {
-    }
-
-    override fun startNeighborMonitor(listener: NeighborUpdateListener?) {
-    }
-
-    override fun closeNeighborMonitor(listener: NeighborUpdateListener?) {
-    }
 
     @OptIn(ExperimentalEncodingApi::class)
     override fun systemCertificates(): StringIterator {
