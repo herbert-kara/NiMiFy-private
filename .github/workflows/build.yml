@@ -425,7 +425,8 @@ jobs:
           subject-path: out/*
 
       - name: Upload Debug Symbols
-        if: ${{ inputs.upload-artifact && inputs.tag-name != 'draft' }}
+        # No Sentry secrets in this fork — sentry-cli 404s and fails the release.
+        if: ${{ inputs.upload-artifact && inputs.tag-name != 'draft' && secrets.SENTRY_AUTH_TOKEN != '' }}
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
           SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
