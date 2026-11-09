@@ -852,7 +852,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "$(BASE_BUNDLE_IDENTIFIER).HiddifyPacketTunnel";
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				PROVISIONING_PROFILE_SPECIFIER = dist.apple.apple.hiddify.com.hiddifypackettunnel;
+				PROVISIONING_PROFILE_SPECIFIER = dist.apple.com.nimify.app.hiddifypackettunnel;
 				SKIP_INSTALL = YES;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
@@ -907,7 +907,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "$(BASE_BUNDLE_IDENTIFIER).HiddifyPacketTunnel";
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				PROVISIONING_PROFILE_SPECIFIER = dist.apple.apple.hiddify.com.hiddifypackettunnel;
+				PROVISIONING_PROFILE_SPECIFIER = dist.apple.com.nimify.app.hiddifypackettunnel;
 				SKIP_INSTALL = YES;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
@@ -1016,7 +1016,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "$(BASE_BUNDLE_IDENTIFIER)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				PROVISIONING_PROFILE_SPECIFIER = dist.apple.apple.hiddify.com;
+				PROVISIONING_PROFILE_SPECIFIER = dist.apple.com.nimify.app;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
 				SWIFT_OBJC_BRIDGING_HEADER = "Runner/Runner-Bridging-Header.h";
@@ -1303,7 +1303,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "$(BASE_BUNDLE_IDENTIFIER)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				PROVISIONING_PROFILE_SPECIFIER = dist.apple.apple.hiddify.com;
+				PROVISIONING_PROFILE_SPECIFIER = dist.apple.com.nimify.app;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
 				SWIFT_OBJC_BRIDGING_HEADER = "Runner/Runner-Bridging-Header.h";
