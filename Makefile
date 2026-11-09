@@ -493,7 +493,11 @@ ios-simulator-validate:
 
 android-libs:
 	$(MKDIR) $(ANDROID_OUT) || echo Folder already exists. Skipping...
-	curl -L $(CORE_URL)/$(CORE_NAME)-android.tar.gz | tar xz -C $(ANDROID_OUT)/
+	curl -sfL --retry 3 $(CORE_URL)/$(CORE_NAME)-android.tar.gz | tar xz -C $(ANDROID_OUT)/
+
+# Android uses the PUBLIC upstream core release matching dependencies.properties:
+# the app's committed Kotlin bindings now match that core, and the old
+# private draft AAR lacks the new libbox classes.
 
 android-apk-libs: android-libs
 android-aab-libs: android-libs

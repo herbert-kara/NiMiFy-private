@@ -57,6 +57,14 @@ class BoxService(
     companion object {
         private const val TAG = "A/BoxService"
 
+        // Strong reference so Go/Seq never loses the Java-side proxy, and
+        // a flag so we never re-setup/close a core while Go goroutines still
+        // hold old refs (native abort "Unknown reference" in go_seq_from_refnum).
+        @Volatile var grpcCoreUp = false
+        // live status mirror so other components (e.g. MainActivity.onDestroy)
+        // can check whether the service is running without binding
+        @Volatile var serviceRunning: Boolean = false
+        private var keepPlatformInterfaceAlive: PlatformInterface? = null
         // The running service's platform interface. The core keeps one per process, and the front
         // core's setup would replace it with null, so MethodHandler passes this one instead.
         @Volatile
@@ -174,27 +182,33 @@ class BoxService(
             DefaultNetworkMonitor.start()
             Libbox.setMemoryLimit(!Settings.disableMemoryLimit)
             activePlatformInterface = platformInterface
-            // 2 = GRPC_BACKGROUND (mTLS), 4 = GRPC_BACKGROUND_INSECURE. Must match Mobile.close.
-            grpcSetupMode = if (GrpcClientProvider.usesMutualTls) 2L else 4L
-            try {
-                Mobile.setup(
-                    SetupOptions().also {
-                        it.basePath = Settings.baseDir
-                        it.workingDir = Settings.workingDir
-                        it.tempDir = Settings.tempDir
-                        it.fixAndroidStack = com.hiddify.hiddify.bg.Bugs.fixAndroidStack
-                        it.mode = grpcSetupMode
-                        it.listen = "127.0.0.1:${Settings.grpcServiceModePort}"
-                        it.secret = ""
-                        it.debug = Settings.debugMode
-                    },
-                    platformInterface,
-                )
-                // the core trusts the client certificate stored in the base folder by itself
-            } catch (e: Exception) {
-                Log.e(TAG, "Mobile.setup failed", e)
-                stopAndAlert(Alert.CreateService, e.message ?: e.toString())
-                return
+            if (grpcCoreUp) {
+                Log.d(TAG, "grpc core already up, skipping Mobile.setup")
+            } else {
+                keepPlatformInterfaceAlive = platformInterface
+                // 2 = GRPC_BACKGROUND (mTLS), 4 = GRPC_BACKGROUND_INSECURE. Must match Mobile.close.
+                grpcSetupMode = if (GrpcClientProvider.usesMutualTls) 2L else 4L
+                try {
+                    Mobile.setup(
+                        SetupOptions().also {
+                            it.basePath = Settings.baseDir
+                            it.workingDir = Settings.workingDir
+                            it.tempDir = Settings.tempDir
+                            it.fixAndroidStack = com.hiddify.hiddify.bg.Bugs.fixAndroidStack
+                            it.mode = grpcSetupMode
+                            it.listen = "127.0.0.1:${Settings.grpcServiceModePort}"
+                            it.secret = ""
+                            it.debug = Settings.debugMode
+                        },
+                        platformInterface,
+                    )
+                    grpcCoreUp = true
+                } catch (e: Exception) {
+                    keepPlatformInterfaceAlive = null
+                    Log.e(TAG, "Mobile.setup failed", e)
+                    stopAndAlert(Alert.CreateService, e.message ?: e.toString())
+                    return
+                }
             }
             status.postValue(Status.Started)
 
@@ -321,7 +335,13 @@ class BoxService(
             }
             Log.i(TAG, "core closed in ${System.currentTimeMillis() - closeStart}ms")
             withContext(Dispatchers.Main) {
+                if (grpcCoreUp) {
+                    grpcCoreUp = false
+                }
+                keepPlatformInterfaceAlive = null
+                if (activePlatformInterface === platformInterface) activePlatformInterface = null
                 status.value = Status.Stopped
+                serviceRunning = false
                 service.stopSelf()
             }
             notification.close()
@@ -340,6 +360,7 @@ class BoxService(
                 callback.onServiceAlert(type.ordinal, message)
             }
             status.value = Status.Stopped
+            serviceRunning = false
         }
     }
 
@@ -369,6 +390,14 @@ class BoxService(
             return Service.START_NOT_STICKY
         }
         status.value = Status.Starting
+        serviceRunning = true
+
+        // Promote to foreground IMMEDIATELY, synchronously. Android gives a
+        // started foreground service ~5s to call startForeground(); previously
+        // it only happened deep inside the IO coroutine (after initialize()),
+        // so a slow init triggered ForegroundServiceDidNotStartInTimeException
+        // and the system killed the whole process mid-connect.
+        notification.show(activeProfileName, R.string.status_starting)
 
         if (!receiverRegistered) {
             ContextCompat.registerReceiver(service, receiver, IntentFilter().apply {

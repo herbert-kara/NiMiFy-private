@@ -5,14 +5,17 @@ import 'package:hiddify/core/app_info/app_info_provider.dart';
 import 'package:hiddify/core/localization/translations.dart';
 import 'package:hiddify/core/router/bottom_sheets/bottom_sheets_notifier.dart';
 import 'package:hiddify/features/home/widget/connection_button.dart';
-import 'package:hiddify/features/home/widget/local_proxy_hint.dart';
+import 'package:hiddify/features/home/widget/home_bg_accent.dart';
+import 'package:hiddify/features/home/widget/pixel_background.dart';
 import 'package:hiddify/features/profile/notifier/active_profile_notifier.dart';
 import 'package:hiddify/features/profile/widget/profile_tile.dart';
 import 'package:hiddify/features/proxy/active/active_proxy_card.dart';
 import 'package:hiddify/features/proxy/active/active_proxy_delay_indicator.dart';
 import 'package:hiddify/gen/assets.gen.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:sliver_tools/sliver_tools.dart';
+import 'package:hiddify/features/home/widget/local_proxy_hint.dart';
 
 class HomePage extends HookConsumerWidget {
   const HomePage({super.key});
@@ -23,9 +26,14 @@ class HomePage extends HookConsumerWidget {
     final t = ref.watch(translationsProvider).requireValue;
     // final hasAnyProfile = ref.watch(hasAnyProfileProvider);
     final activeProfile = ref.watch(activeProfileProvider);
+    final bgAccent = useValueNotifier(const Color(0xFF4A4D8B));
 
-    return Scaffold(
+    return HomeBgAccent(
+      accent: bgAccent,
+      child: Scaffold(
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
+        backgroundColor: Colors.transparent,
         // leading: (RootScaffold.stateKey.currentState?.hasDrawer ?? false) && showDrawerButton(context)
         //     ? DrawerButton(
         //         onPressed: () {
@@ -35,7 +43,7 @@ class HomePage extends HookConsumerWidget {
         //     : null,
         title: Row(
           children: [
-            Assets.images.logo.svg(height: 24),
+            Assets.images.logo.svg(height: 48),
             const Gap(8),
             Text.rich(
               TextSpan(
@@ -72,152 +80,163 @@ class HomePage extends HookConsumerWidget {
           const Gap(8),
         ],
       ),
-      // The sky and the map are drawn once into their own layer: a ripple or a label changing on
-      // the page no longer redraws the whole map image under it.
-      body: Stack(
-        fit: StackFit.expand,
-        children: [
-          RepaintBoundary(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                // A sky behind the connect button, as at an eclipse: in dark mode a touch lighter round
-                // the button, fading to the theme's own dark; in light mode brightest there, a touch
-                // darker towards the edges. Both barely there, centred on where the button sits.
-                gradient: theme.brightness == Brightness.dark
-                    ? RadialGradient(
-                        center: const Alignment(0, -.15),
-                        radius: .85,
-                        colors: [
-                          Colors.white.withValues(alpha: .045),
-                          Colors.white.withValues(alpha: .015),
-                          Colors.white.withValues(alpha: 0),
-                        ],
-                        stops: const [0, .45, 1],
-                      )
-                    : RadialGradient(
-                        center: const Alignment(0, -.15),
-                        radius: 1.1,
-                        colors: [
-                          Colors.white.withValues(alpha: .55),
-                          Colors.white.withValues(alpha: 0),
-                          Colors.black.withValues(alpha: .045),
-                        ],
-                        stops: const [0, .5, 1],
-                      ),
-                image: DecorationImage(
-                  image: const AssetImage('assets/images/world_map.png'), // Replace with your image path
-                  fit: BoxFit.cover,
-                  opacity: 0.09,
-                  colorFilter: theme.brightness == Brightness.dark
-                      ? ColorFilter.mode(Colors.white.withValues(alpha: .15), BlendMode.srcIn) //
-                      : ColorFilter.mode(
-                          Colors.grey.withValues(alpha: 1),
-                          BlendMode.srcATop,
-                        ), // Apply white tint in dark mode
+      body: Listener(
+        behavior: HitTestBehavior.translucent,
+        onPointerDown: (_) => pixelTouched.value = true,
+        onPointerUp: (_) => pixelTouched.value = false,
+        onPointerCancel: (_) => pixelTouched.value = false,
+        child: Stack(
+          children: [
+            // Dribbble-style background: charcoal gradient + status glow
+            Positioned.fill(
+              child: ValueListenableBuilder<Color>(
+                valueListenable: bgAccent,
+                builder: (context, accent, _) {
+                  final on = accent.green > accent.red;
+                  return CustomPaint(
+                    painter: _HomeBgPainter(accent: accent, on: on ? 1 : 0),
+                  );
+                },
+              ),
+            ),
+            // Floating pixel particles (restored from v4.1.3) drawn on top of
+            // the gradient so they stay visible
+            const Positioned.fill(child: PixelBackgroundWidget()),
+            Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 600),
+                child: CustomScrollView(
+                  slivers: [
+                    MultiSliver(
+                      children: [
+                        // const Gap(100),
+                        switch (activeProfile) {
+                          AsyncData(value: final profile?) => ProfileTile(
+                            profile: profile,
+                            isMain: true,
+                            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          ),
+                          _ => const Text(""),
+                        },
+                        const SliverFillRemaining(
+                          hasScrollBody: false,
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [ConnectionButton(), ActiveProxyDelayIndicator()],
+                                ),
+                              ),
+                              ActiveProxyFooter(),
+                              Gap(32),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    // AsyncData() => switch (hasAnyProfile) {
+                    //     AsyncData(value: true) => const EmptyActiveProfileHomeBody(),
+                    //     _ => const EmptyProfilesHomeBody(),
+                    //   },
+                    // AsyncError(:final error) => SliverErrorBodyPlaceholder(t.presentShortError(error)),
+                    // _ => const SliverToBoxAdapter(),
+                    // },
+                                    ],
                 ),
               ),
             ),
-          ),
-          Stack(
-            alignment: Alignment.center,
-            children: [
-              Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(
-                    maxWidth: 600, // Set the maximum width here
-                  ),
-                  child: CustomScrollView(
-                    slivers: [
-                      // switch (activeProfile) {
-                      // AsyncData(value: final profile?) =>
-                      MultiSliver(
-                        children: [
-                          // const Gap(100),
-                          switch (activeProfile) {
-                            AsyncData(value: final profile?) => ProfileTile(
-                              profile: profile,
-                              isMain: true,
-                              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                            ),
-                            _ => const Text(""),
-                          },
-                          const SliverFillRemaining(
-                            hasScrollBody: false,
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Expanded(
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [ConnectionButton(), ActiveProxyDelayIndicator()],
-                                  ),
-                                ),
-                                ActiveProxyFooter(),
-                                Gap(32),
-                              ],
-                            ),
-                          ),
-                        ],
+            if (ref.watch(hasAnyProfileProvider).value ?? false)
+              Positioned(
+                right: 0,
+                left: 0,
+                bottom: 0,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  // tabs of either height stand on the bottom edge
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    // in proxy mode, a smaller tab beside this one on how to point apps at the proxy
+                    const Flexible(child: LocalProxyHint()),
+                    Material(
+                      color: theme.colorScheme.primaryContainer,
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(16),
+                        topRight: Radius.circular(16),
                       ),
-                      // AsyncData() => switch (hasAnyProfile) {
-                      //     AsyncData(value: true) => const EmptyActiveProfileHomeBody(),
-                      //     _ => const EmptyProfilesHomeBody(),
-                      //   },
-                      // AsyncError(:final error) => SliverErrorBodyPlaceholder(t.presentShortError(error)),
-                      // _ => const SliverToBoxAdapter(),
-                      // },
-                    ],
-                  ),
-                ),
-              ),
-              if (ref.watch(hasAnyProfileProvider).value ?? false)
-                Positioned(
-                  right: 0,
-                  left: 0,
-                  bottom: 0,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    // tabs of either height stand on the bottom edge
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      // in proxy mode, a smaller tab beside this one on how to point apps at the proxy
-                      const Flexible(child: LocalProxyHint()),
-                      Material(
-                        color: theme.colorScheme.primaryContainer,
+                      child: InkWell(
                         borderRadius: const BorderRadius.only(
                           topLeft: Radius.circular(16),
                           topRight: Radius.circular(16),
                         ),
-                        child: InkWell(
-                          borderRadius: const BorderRadius.only(
-                            topLeft: Radius.circular(16),
-                            topRight: Radius.circular(16),
-                          ),
-                          onTap: () => ref.read(bottomSheetsNotifierProvider.notifier).showQuickSettings(),
-                          child: Container(
-                            height: 32,
-                            padding: const EdgeInsetsDirectional.only(start: 16, end: 8),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(t.pages.home.quickSettings),
-                                const Gap(4),
-                                const Icon(Icons.arrow_drop_up_rounded, size: 16),
-                              ],
-                            ),
+                        onTap: () => ref.read(bottomSheetsNotifierProvider.notifier).showQuickSettings(),
+                        child: Container(
+                          height: 32,
+                          padding: const EdgeInsetsDirectional.only(start: 16, end: 8),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(t.pages.home.quickSettings),
+                              const Gap(4),
+                              const Icon(Icons.arrow_drop_up_rounded, size: 16),
+                            ],
                           ),
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-            ],
-          ),
-        ],
+              ),
+          ],
+        ),
+      ),
       ),
     );
   }
+}
+
+/// Dribbble-style home background: vertical charcoal gradient + soft radial
+/// status glow behind the power button.
+class _HomeBgPainter extends CustomPainter {
+  final Color accent;
+  final double on;
+
+  _HomeBgPainter({required this.accent, required this.on});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (size.isEmpty) return;
+    final Rect full = Offset.zero & size;
+    canvas.drawRect(
+      full,
+      Paint()
+        ..shader = const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Color(0xFF34383E),
+            Color(0xFF2C3036),
+            Color(0xFF23272C),
+          ],
+        ).createShader(full),
+    );
+    final Offset c = Offset(size.width / 2, size.height * 0.42);
+    final double glowR = size.longestSide * 0.62;
+    final Paint glow = Paint()
+      ..shader = RadialGradient(
+        colors: [
+          accent.withOpacity(0.16 + 0.10 * on),
+          accent.withOpacity(0.0),
+        ],
+      ).createShader(Rect.fromCircle(center: c, radius: glowR));
+    canvas.drawCircle(c, glowR, glow);
+  }
+
+  @override
+  bool shouldRepaint(_HomeBgPainter old) =>
+      old.accent != accent || old.on != on;
 }
 
 class AppVersionLabel extends HookConsumerWidget {

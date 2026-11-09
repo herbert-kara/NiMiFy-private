@@ -10,20 +10,19 @@ import 'package:hiddify/core/router/bottom_sheets/bottom_sheets_notifier.dart';
 import 'package:hiddify/core/router/dialog/dialog_notifier.dart';
 import 'package:hiddify/core/theme/theme_extensions.dart';
 import 'package:hiddify/core/widget/animated_text.dart';
-import 'package:hiddify/core/widget/frame_load.dart';
-import 'package:hiddify/core/widget/unique_keys_layout.dart';
 import 'package:hiddify/features/chain/model/chain_enum.dart';
-import 'package:hiddify/features/chain/overview/chain_mode_icon.dart';
 import 'package:hiddify/features/connection/model/connection_failure.dart';
 import 'package:hiddify/features/connection/model/connection_status.dart';
 import 'package:hiddify/features/connection/notifier/connection_notifier.dart';
 import 'package:hiddify/features/home/widget/eclipse_button_painter.dart';
+import 'package:hiddify/features/home/widget/home_bg_accent.dart';
 import 'package:hiddify/features/profile/notifier/active_profile_notifier.dart';
 import 'package:hiddify/features/proxy/active/active_proxy_notifier.dart';
 import 'package:hiddify/features/proxy/model/connection_health.dart';
-import 'package:hiddify/features/proxy/model/proxy_entity.dart';
+import 'package:hiddify/features/settings/data/config_option_repository.dart';
 import 'package:hiddify/features/stats/notifier/stats_notifier.dart';
 import 'package:hiddify/gen/assets.gen.dart';
+import 'package:hiddify/singbox/model/singbox_config_enum.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 /// What the button shows, one value per look.
@@ -83,9 +82,27 @@ class ConnectionButton extends HookConsumerWidget {
     final chainName = health?.chain?.present(t) ?? '';
     final degraded = look == _Look.connected && (health?.degraded ?? false);
     final hopPending = look == _Look.connected && (health?.hopPending ?? false);
+    final chainType = health?.chain;
+    final showHealth = ref.read(bottomSheetsNotifierProvider.notifier).showConnectionHealth;
 
     const buttonTheme = ConnectionButtonTheme.light;
     final today = DateTime.now();
+    final buttonColor = switch (look) {
+      _Look.connected when degraded => _degradedColor,
+      // the traffic waits for the chain hop: still on its way
+      _Look.connected when hopPending => const Color(0xFF455FE9),
+      _Look.connected => buttonTheme.connectedColor!,
+      _Look.noProxies => const Color.fromARGB(255, 185, 176, 103),
+      _Look.failed => Colors.red,
+      // the logo's own blue while the connection is on its way
+      _Look.connecting || _Look.waiting || _Look.hotReloading || _Look.disconnecting => const Color(0xFF455FE9),
+      _ => buttonTheme.idleColor!,
+    };
+    // mirror the status color to the home background glow; without this the
+    // background never leaves its idle look (the v5.3.0 merge dropped the writer).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (context.mounted) HomeBgAccent.of(context)?.value = buttonColor;
+    });
     return _ConnectionButton(
       look: look,
       onTap: onTap,
@@ -111,24 +128,17 @@ class ConnectionButton extends HookConsumerWidget {
         _Look.failed => t.connection.failed,
       },
       hint: look == _Look.failed ? t.connection.tapToRetry : null,
-      searching: hopPending,
-      // the chain hop, while the core runs with the chain on
-      hop: {_Look.connected, _Look.noProxies, _Look.waiting}.contains(look)
-          ? ref.watch(activeProxyCardProvider.select((card) => card?.hopStatus == null ? null : card))
+      chain: chainType != null && {_Look.connected, _Look.noProxies, _Look.waiting}.contains(look)
+          ? (
+              type: chainType,
+              mode: ref.watch(chainType.isUnblocker() ? ConfigOptions.unblockerMode : ConfigOptions.extraSecurityMode),
+              state: health!.hopState,
+              label: '$chainName: ${_hopLabel(h, health)}',
+            )
           : null,
-      onHop: ref.read(bottomSheetsNotifierProvider.notifier).showConnectionHealth,
-      hopLabel: health == null ? '' : '$chainName: ${_hopLabel(h, health)}',
-      buttonColor: switch (look) {
-        _Look.connected when degraded => _degradedColor,
-        // the traffic waits for the chain hop: still on its way
-        _Look.connected when hopPending => const Color(0xFF455FE9),
-        _Look.connected => buttonTheme.connectedColor!,
-        _Look.noProxies => const Color.fromARGB(255, 185, 176, 103),
-        _Look.failed => Colors.red,
-        // the logo's own blue while the connection is on its way
-        _Look.connecting || _Look.waiting || _Look.hotReloading || _Look.disconnecting => const Color(0xFF455FE9),
-        _ => buttonTheme.idleColor!,
-      },
+      onChain: showHealth,
+      onLabel: degraded || hopPending ? showHealth : null,
+      buttonColor: buttonColor,
       image: switch (look) {
         _Look.connected || _Look.noProxies || _Look.hotReloading => Assets.images.connectNorouz,
         _ => Assets.images.disconnectNorouz,
@@ -210,10 +220,9 @@ class _ConnectionButton extends HookWidget {
     required this.upload,
     required this.label,
     required this.hint,
-    required this.searching,
-    required this.hop,
-    required this.onHop,
-    required this.hopLabel,
+    required this.chain,
+    required this.onChain,
+    required this.onLabel,
     required this.buttonColor,
     required this.image,
     required this.useImage,
@@ -232,17 +241,12 @@ class _ConnectionButton extends HookWidget {
   final String label;
   final String? hint;
 
-  /// Connected, but the traffic still waits for the chain hop: the radar keeps searching.
-  final bool searching;
-
   /// The chain hop as a badge on the button; null with the chain off.
-  final ActiveProxyCardData? hop;
+  final ({ChainType type, ChainMode mode, HealthState state, String label})? chain;
+  final VoidCallback onChain;
 
-  /// Opens the connection check.
-  final VoidCallback onHop;
-
-  /// What the badge says to a screen reader and in its tooltip: the chain and its state.
-  final String hopLabel;
+  /// Opens the connection check from a label that names a problem; null otherwise.
+  final VoidCallback? onLabel;
   final Color buttonColor;
   final AssetGenImage image;
   final bool useImage;
@@ -252,22 +256,11 @@ class _ConnectionButton extends HookWidget {
   /// Room round the button for its light.
   static const _glow = 110.0;
 
-  /// The button and its light take most of a short screen (a TV, a phone held sideways, a small
-  /// window): full size from [_fullFrom] logical pixels of height, shrinking evenly to
-  /// [_smallest] at [_smallFrom] and below.
-  static const _fullFrom = 860.0;
-  static const _smallFrom = 640.0;
-  static const _smallest = .65;
-
-  static double _scaleFor(double height) =>
-      _smallest + (1 - _smallest) * ((height - _smallFrom) / (_fullFrom - _smallFrom)).clamp(0.0, 1.0);
-
   EclipseLook get _eclipseLook => switch (look) {
     _Look.loading || _Look.disconnected => EclipseLook.idle,
     _Look.connecting => EclipseLook.starting,
     _Look.disconnecting => EclipseLook.stopping,
     _Look.waiting || _Look.hotReloading => EclipseLook.waiting,
-    _Look.connected when searching => EclipseLook.waiting,
     _Look.connected || _Look.noProxies => EclipseLook.connected,
     _Look.failed => EclipseLook.error,
   };
@@ -276,11 +269,8 @@ class _ConnectionButton extends HookWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final still = MediaQuery.disableAnimationsOf(context);
-    final scale = _scaleFor(MediaQuery.sizeOf(context).height);
     final clock = useMemoized(() => Stopwatch()..start());
     double now() => clock.elapsedMicroseconds / 1e6;
-    // keyboard / TV remote focus: a ring round the button, so the face and its logo stay visible
-    final focused = useState(false);
 
     // when the look last changed, and from what
     final eclipseLook = _eclipseLook;
@@ -318,27 +308,11 @@ class _ConnectionButton extends HookWidget {
 
     // Timer (not useSingleTickerProvider): that hook only allows one createTicker
     // for the State's life, so look/still changes crashed after disconnect→connect.
-    // A timer does not stop with its tickers, so it stops itself while the button cannot be
-    // seen: under another tab, sheet or route (TickerMode), or with the app in the background.
-    // Inactive stays on: on desktop that is only the window without focus.
-    final ticking = useValueListenable(TickerMode.getNotifier(context));
-    final shown = switch (useAppLifecycleState()) {
-      AppLifecycleState.paused || AppLifecycleState.hidden || AppLifecycleState.detached => false,
-      _ => true,
-    };
-    // A phone that cannot draw a frame in the 33 ms before the next one drops frames in bursts.
-    // Measured, not guessed from the model: such a phone gets a steady 20 or 15 fps of the same
-    // frames. A phone that keeps up sees nothing of this.
-    final load = useMemoized(
-      () => FrameLoad(const [Duration(milliseconds: 33), Duration(milliseconds: 50), Duration(milliseconds: 66)]),
-    );
-    final level = useValueListenable(load.level);
     final time = useValueNotifier(0.0);
     useEffect(() {
-      if (still || !ticking || !shown) return null;
-      load.watch();
+      if (still) return null;
       var last = now();
-      final timer = Timer.periodic(load.interval, (_) {
+      final timer = Timer.periodic(const Duration(milliseconds: 33), (_) {
         final at = now();
         // the light rises with the traffic in about a second, and fades more slowly, so the
         // stats reloading for a moment (coming back from the background) barely dims it
@@ -350,11 +324,8 @@ class _ConnectionButton extends HookWidget {
         final settled = change.value.look == EclipseLook.idle && at - change.value.at > 1;
         if (!settled) time.value = at;
       });
-      return () {
-        timer.cancel();
-        load.unwatch();
-      };
-    }, [still, ticking, shown, level]);
+      return timer.cancel;
+    }, [still]);
 
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -364,136 +335,122 @@ class _ConnectionButton extends HookWidget {
           enabled: onTap != null,
           label: label,
           hint: hint,
-          // drawn at full size, then scaled as a whole (light and badges too) to fit short screens
           child: SizedBox.square(
-            dimension: _size * scale,
-            child: OverflowBox(
-              minWidth: _size,
-              maxWidth: _size,
-              minHeight: _size,
-              maxHeight: _size,
-              child: Transform.scale(
-                scale: scale,
-                child: SizedBox.square(
-                  dimension: _size,
-                  child: Stack(
-                    fit: StackFit.expand,
-                    clipBehavior: Clip.none,
-                    children: [
-                      Positioned(
-                        left: -_glow,
-                        top: -_glow,
-                        right: -_glow,
-                        bottom: -_glow,
-                        child: IgnorePointer(
-                          child: RepaintBoundary(
-                            child: ValueListenableBuilder(
-                              valueListenable: time,
-                              builder: (context, t, _) {
-                                final c = change.value;
-                                return CustomPaint(
-                                  isComplex: true,
-                                  willChange: true,
-                                  painter: EclipseButtonPainter(
-                                    frame: EclipseFrame(
-                                      look: c.look,
-                                      previous: c.previous,
-                                      since: still ? 10 : now() - c.at,
-                                      time: still ? 0 : now(),
-                                      color: c.color,
-                                      previousColor: c.previousColor,
-                                    ),
-                                    radius: _size / 2,
-                                    traffic: traffic.value,
-                                    dark: theme.brightness == Brightness.dark,
-                                    drawLogo: !useImage,
-                                    logoOpacity: look == _Look.loading ? .38 : 1,
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-                        ),
-                      ),
-                      // the ink only tints the face a little: a solid hover or focus color would hide the logo
-                      Material(
-                        key: const ValueKey("home_connection_button"),
-                        shape: const CircleBorder(),
-                        color: Colors.transparent,
-                        clipBehavior: Clip.antiAlias,
-                        child: InkWell(
-                          onTap: onTap,
-                          onFocusChange: (value) => focused.value = value,
-                          focusColor: Colors.transparent,
-                          hoverColor: Colors.black.withValues(alpha: .05),
-                          highlightColor: Colors.black.withValues(alpha: .06),
-                          splashColor: Colors.black.withValues(alpha: .08),
-                          child: useImage ? Padding(padding: const EdgeInsets.all(36), child: image.image()) : null,
-                        ),
-                      ),
-                      Positioned.fill(
-                        child: IgnorePointer(
-                          child: AnimatedOpacity(
-                            opacity: focused.value ? 1 : 0,
-                            duration: const Duration(milliseconds: 180),
-                            child: Transform.scale(
-                              scale: 1.1,
-                              child: DecoratedBox(
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  border: Border.all(color: theme.colorScheme.primary, width: 3),
-                                ),
+            dimension: _size,
+            child: Stack(
+              fit: StackFit.expand,
+              clipBehavior: Clip.none,
+              children: [
+                Positioned(
+                  left: -_glow,
+                  top: -_glow,
+                  right: -_glow,
+                  bottom: -_glow,
+                  child: IgnorePointer(
+                    child: RepaintBoundary(
+                      child: ValueListenableBuilder(
+                        valueListenable: time,
+                        builder: (context, t, _) {
+                          final c = change.value;
+                          return CustomPaint(
+                            isComplex: true,
+                            willChange: true,
+                            painter: EclipseButtonPainter(
+                              frame: EclipseFrame(
+                                look: c.look,
+                                previous: c.previous,
+                                since: still ? 10 : now() - c.at,
+                                time: still ? 0 : now(),
+                                color: c.color,
+                                previousColor: c.previousColor,
                               ),
+                              radius: _size / 2,
+                              traffic: traffic.value,
+                              dark: theme.brightness == Brightness.dark,
+                              drawLogo: !useImage,
+                              logoOpacity: look == _Look.loading ? .38 : 1,
                             ),
-                          ),
-                        ),
+                          );
+                        },
                       ),
-                      // the error badge opens what went wrong
-                      if (look == _Look.failed && onErrorDetails != null)
-                        Positioned.fromRect(
-                          rect: EclipseButtonPainter.errorBadgeRect(
-                            const Offset(_size / 2, _size / 2),
-                            _size / 2,
-                          ).inflate(8),
-                          child: Semantics(
-                            button: true,
-                            label: errorDetailsLabel,
-                            child: GestureDetector(behavior: HitTestBehavior.opaque, onTap: onErrorDetails),
-                          ),
-                        ),
-                      // the chain hop sits on the rim at the top left, half on the button
-                      if (hop case final hop?)
-                        Positioned.fromRect(
-                          rect: Rect.fromCircle(
-                            center:
-                                const Offset(_size / 2, _size / 2) + Offset.fromDirection(5 * math.pi / 4, _size / 2),
-                            radius: _ChainBadge.size / 2,
-                          ),
-                          child: _ChainBadge(hop, label: hopLabel, onTap: onHop),
-                        ),
-                    ],
+                    ),
                   ),
                 ),
-              ),
+                Material(
+                  key: const ValueKey("home_connection_button"),
+                  shape: const CircleBorder(),
+                  color: Colors.transparent,
+                  clipBehavior: Clip.antiAlias,
+                  child: InkWell(
+                    focusColor: Colors.grey,
+                    onTap: onTap,
+                    child: useImage ? Padding(padding: const EdgeInsets.all(36), child: image.image()) : null,
+                  ),
+                ),
+                // the error badge opens what went wrong
+                if (look == _Look.failed && onErrorDetails != null)
+                  Positioned.fromRect(
+                    rect: EclipseButtonPainter.errorBadgeRect(const Offset(_size / 2, _size / 2), _size / 2).inflate(8),
+                    child: Semantics(
+                      button: true,
+                      label: errorDetailsLabel,
+                      child: GestureDetector(behavior: HitTestBehavior.opaque, onTap: onErrorDetails),
+                    ),
+                  ),
+                // the chain hop sits on the rim at the top left, half on the button
+                if (chain case final chain? when look != _Look.failed)
+                  Positioned.fromRect(
+                    rect: Rect.fromCircle(
+                      center: const Offset(_size / 2, _size / 2) + Offset.fromDirection(5 * math.pi / 4, _size / 2),
+                      radius: _ChainBadge.size / 2,
+                    ),
+                    child: _ChainBadge(
+                      type: chain.type,
+                      mode: chain.mode,
+                      state: chain.state,
+                      label: chain.label,
+                      onTap: onChain,
+                    ),
+                  ),
+              ],
             ),
           ),
         ),
-        Gap(24 * scale),
-        Column(
-          children: [
-            AnimatedText(label, style: theme.textTheme.titleMedium),
-            AnimatedSwitcher(
-              layoutBuilder: uniqueKeysLayout(),
-              duration: const Duration(milliseconds: 250),
-              child: hint == null
-                  ? const SizedBox.shrink()
-                  : Text(
-                      hint!,
-                      key: ValueKey(hint),
-                      style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+        const Gap(24),
+        ExcludeSemantics(
+          excluding: onLabel == null,
+          child: Column(
+            children: [
+              if (onLabel case final onLabel?)
+                // the label names what stops the traffic; tapping it shows the whole path
+                InkWell(
+                  onTap: onLabel,
+                  borderRadius: BorderRadius.circular(8),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Flexible(child: AnimatedText(label, style: theme.textTheme.titleMedium)),
+                        Icon(Icons.chevron_right_rounded, size: 20, color: theme.colorScheme.onSurfaceVariant),
+                      ],
                     ),
-            ),
-          ],
+                  ),
+                )
+              else
+                AnimatedText(label, style: theme.textTheme.titleMedium),
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 250),
+                child: hint == null
+                    ? const SizedBox.shrink()
+                    : Text(
+                        hint!,
+                        key: ValueKey(hint),
+                        style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                      ),
+              ),
+            ],
+          ),
         ),
       ],
     );
@@ -505,51 +462,41 @@ class _ConnectionButton extends HookWidget {
 /// connects, red with a cross when it fails, grey while it waits for the selected proxy. Opens the
 /// connection check.
 class _ChainBadge extends StatelessWidget {
-  const _ChainBadge(this.card, {required this.label, required this.onTap});
-  final ActiveProxyCardData card;
+  const _ChainBadge({
+    required this.type,
+    required this.mode,
+    required this.state,
+    required this.label,
+    required this.onTap,
+  });
+  final ChainType type;
+  final ChainMode mode;
+  final HealthState state;
   final String label;
   final VoidCallback onTap;
 
   static const size = 56.0;
 
-  ChainType get _type => card.chain.isUnblocker() ? ChainType.unblocker : ChainType.extraSecurity;
-
-  IconData get _glyph => switch ((_type, card.hopStatus!)) {
-    (ChainType.extraSecurity, StepStatus.connected) => Icons.gpp_good_rounded,
-    (ChainType.extraSecurity, StepStatus.failed) => Icons.gpp_bad_rounded,
+  IconData get _glyph => switch ((type, state)) {
+    (ChainType.extraSecurity, HealthState.ok) => Icons.gpp_good_rounded,
+    (ChainType.extraSecurity, HealthState.failed) => Icons.gpp_bad_rounded,
     (ChainType.extraSecurity, _) => Icons.shield_outlined,
-    // a door, not a lock: the unblocker gets the proxy through, it does not secure it. Drawn by
-    // PassingDoor; these only tell its running state from its shut one, to switch between them
-    (ChainType.unblocker, StepStatus.connected || StepStatus.connecting || StepStatus.slow) =>
-      Icons.meeting_room_rounded,
-    (ChainType.unblocker, _) => Icons.door_front_door_rounded,
+    (ChainType.unblocker, HealthState.ok) => Icons.lock_open_rounded,
+    (ChainType.unblocker, HealthState.failed) => Icons.lock_rounded,
+    (ChainType.unblocker, _) => Icons.lock_open_outlined,
   };
 
-  Widget _glyphWidget(StepStatus status) => switch ((_type, status)) {
-    // the traffic keeps getting through on its way and once up, as on the proxy card; shut while it
-    // waits or fails
-    (ChainType.unblocker, _) => PassingDoor(
-      size: _glyphSize,
-      color: Colors.white,
-      animate: status == StepStatus.connecting || status == StepStatus.slow || status == StepStatus.connected,
-    ),
-    _ => Icon(_glyph, size: _glyphSize, color: Colors.white),
-  };
-
-  /// The solid shape under the glyph: the white seal that strokes it and fills its cut-outs. The
-  /// door sits on a disc, smaller to stay inside it.
-  IconData get _seal => _type == ChainType.extraSecurity ? Icons.shield_rounded : Icons.circle;
-  double get _glyphSize => _type == ChainType.extraSecurity ? 40 : 30;
+  /// The solid shape under the glyph: the white seal that strokes it and fills its cut-outs.
+  IconData get _seal => type == ChainType.extraSecurity ? Icons.shield_rounded : Icons.lock_rounded;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final status = card.hopStatus!;
-    final (main, accent) = _type.colors(card.hopMode);
+    final (main, accent) = type.colors(mode);
     // a gradient in the chain's own colors; red when it fails, grey while it waits
-    final (from, to) = switch (status) {
-      StepStatus.failed => (const Color(0xFFFF6B6B), theme.colorScheme.error),
-      StepStatus.waiting => (theme.colorScheme.outline, theme.colorScheme.outlineVariant),
+    final (from, to) = switch (state) {
+      HealthState.failed => (const Color(0xFFFF6B6B), theme.colorScheme.error),
+      HealthState.blocked => (theme.colorScheme.outline, theme.colorScheme.outlineVariant),
       _ => (main, accent),
     };
     const face = Color(0xFFF7F7F9);
@@ -565,7 +512,7 @@ class _ChainBadge extends StatelessWidget {
             size: 50,
             color: face,
             shadows: [
-              Shadow(color: from.withValues(alpha: status == StepStatus.waiting ? .2 : .55), blurRadius: 14),
+              Shadow(color: from.withValues(alpha: state == HealthState.blocked ? .2 : .55), blurRadius: 14),
               Shadow(color: Colors.black.withValues(alpha: .25), blurRadius: 4, offset: const Offset(0, 2)),
             ],
           ),
@@ -576,26 +523,25 @@ class _ChainBadge extends StatelessWidget {
               end: Alignment.bottomRight,
               colors: [from, to],
             ).createShader(rect),
-            child: _glyphWidget(status),
+            child: Icon(_glyph, size: 40, color: Colors.white),
           ),
         ],
       ),
     );
-    glyph = switch (status) {
+    glyph = switch (state) {
       // once up, a light sweeps across it now and then
-      StepStatus.connected =>
+      HealthState.ok =>
         glyph
             .animate(onPlay: (c) => c.repeat())
             .shimmer(delay: 2500.ms, duration: 1200.ms, color: Colors.white.withValues(alpha: .7)),
-      // on its way: the door opening says so; the shield breathes
-      StepStatus.connecting || StepStatus.slow when _type == ChainType.unblocker => glyph,
-      StepStatus.connecting || StepStatus.slow =>
+      // on its way: it breathes
+      HealthState.pending =>
         glyph
             .animate(onPlay: (c) => c.repeat(reverse: true))
             .scaleXY(begin: .92, end: 1.04, duration: 900.ms, curve: Curves.easeInOut),
       // failed: one short shake to catch the eye
-      StepStatus.failed => glyph.animate().shake(hz: 4, rotation: .06, duration: 500.ms),
-      StepStatus.waiting => glyph,
+      HealthState.failed => glyph.animate().shake(hz: 4, rotation: .06, duration: 500.ms),
+      HealthState.blocked => glyph,
     };
     return Semantics(
       button: true,
@@ -605,15 +551,11 @@ class _ChainBadge extends StatelessWidget {
         child: GestureDetector(
           onTap: onTap,
           behavior: HitTestBehavior.opaque,
-          // its shimmer and breathing repaint the badge alone, not the button and the page
-          child: RepaintBoundary(
-            child: Center(
-              child: AnimatedSwitcher(
-                layoutBuilder: uniqueKeysLayout(),
-                duration: const Duration(milliseconds: 250),
-                transitionBuilder: (child, a) => ScaleTransition(scale: a, child: child),
-                child: KeyedSubtree(key: ValueKey(_glyph), child: glyph),
-              ),
+          child: Center(
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 250),
+              transitionBuilder: (child, a) => ScaleTransition(scale: a, child: child),
+              child: KeyedSubtree(key: ValueKey(_glyph), child: glyph),
             ),
           ),
         ),
