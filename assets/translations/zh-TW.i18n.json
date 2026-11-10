@@ -1,6 +1,6 @@
 {
   "common": {
-    "appTitle": "Hiddify",
+    "appTitle": "NiMiFy",
     "start": "開始",
     "version": "版本",
     "ok": "確定",
@@ -98,7 +98,7 @@
   "intro": {
     "banner": "暢享無限制網路的所需一切",
     "termsAndPolicyCaution(rich)": "繼續即表示您同意 ${tap(@:pages.about.termsAndConditions)}",
-    "info(rich)": "由 Hiddify 以 ❤️ 製作。${tap_source(開源)} 和 ${tap_license(授權)}"
+    "info(rich)": "由 NiMiFy 以 ❤️ 製作。${tap_source(開源)} 和 ${tap_license(授權)}"
   },
   "pages": {
     "home": {
@@ -203,7 +203,7 @@
         "received": "已收到來自手機的內容",
         "from": "來自 $address",
         "page": {
-          "title": "傳送到電視上的 Hiddify",
+          "title": "傳送到電視上的 NiMiFy",
           "intro": "只要四個步驟就能把訂閱加入電視，不必用遙控器輸入。",
           "steps": {
             "network": {
@@ -797,7 +797,7 @@
       "updateNow": "立即更新",
       "downloading": "正在下載…",
       "installing": "正在啟動安裝程式…",
-      "allowInstall": "請在開啟的設定中允許 Hiddify 安裝應用程式,然後重試。",
+      "allowInstall": "請在開啟的設定中允許 NiMiFy 安裝應用程式,然後重試。",
       "failed": "無法安裝更新。",
       "openPage": "開啟發布頁面",
       "tryAgain": "重試"
@@ -837,7 +837,7 @@
     "adminBgService": {
       "vpnNeedsAdmin": {
         "title": "需要管理員權限",
-        "msg": "VPN 模式需要一次性的管理員權限來安裝 Hiddify 背景服務。之後無需再次授權即可連線。",
+        "msg": "VPN 模式需要一次性的管理員權限來安裝 NiMiFy 背景服務。之後無需再次授權即可連線。",
         "connectWithAdmin": "使用管理員權限連線",
         "waitingTitle": "正在等待管理員權限",
         "waitingMsg": "請允許管理員權限要求以繼續。你可以停止並稍後重試。",
@@ -926,7 +926,7 @@
     },
     "keepTop": {
       "title": "大型訂閱",
-      "description": "此設定檔包含 $count 個代理。全部執行會消耗電量、流量和記憶體。Hiddify 可以先測試一次,只保留最快的 $keep 個執行,暫停其餘代理。",
+      "description": "此設定檔包含 $count 個代理。全部執行會消耗電量、流量和記憶體。NiMiFy 可以先測試一次,只保留最快的 $keep 個執行,暫停其餘代理。",
       "hint": "您隨時可以在代理清單末尾重新執行全部代理。",
       "keeping": "最快的 $keep 個執行,其餘暫停",
       "all": "全部 $count 個執行",

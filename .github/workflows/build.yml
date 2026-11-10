@@ -25,10 +25,10 @@ env:
   # TARGET_NAME_rpm: "Hiddify-rpm-x64"
   TARGET_NAME_apk: "Hiddify-Android"
   TARGET_NAME_aab: "Hiddify-Android"
-  TARGET_NAME_exe: "Hiddify-Windows-Setup-x64"
+  TARGET_NAME_exe: "NiMiFy-Windows-Setup-x64"
   # Must match prepare_release_notes.py / README asset names (Setup-x64.Msix).
-  TARGET_NAME_msix: "Hiddify-Windows-Setup-x64"
-  TARGET_NAME_zip: "Hiddify-Windows-Portable-x64"
+  TARGET_NAME_msix: "NiMiFy-Windows-Setup-x64"
+  TARGET_NAME_zip: "NiMiFy-Windows-Portable-x64"
   TARGET_NAME_dmg: "Hiddify-MacOS"
   TARGET_NAME_pkg: "Hiddify-MacOS-Installer"
   TARGET_NAME_macos_appstore_pkg: "Hiddify-MacOS-AppStore"

@@ -17,7 +17,11 @@ class Db extends _$Db with InfraLogger {
   // below, and regenerate — full checklist in `README.md` next to this file.
   // Migrations run on every user's device on update; a wrong one can lose data.
   @override
-  int get schemaVersion => 7;
+    int get schemaVersion => 7;
+
+    /// Set when an upgraded DB turns out to be a legacy fork (NiMiFy 4.x) schema:
+    /// it already carries `profile_override` and never had `test_url`.
+    bool _legacyForkSchema = false;
 
   static QueryExecutor _openConnection() {
     return LazyDatabase(
@@ -58,24 +62,51 @@ class Db extends _$Db with InfraLogger {
           }
         },
         from4To5: (m, schema) async {
-          await m.deleteTable('geo_asset_entries');
-          await m.renameColumn(schema.profileEntries, 'test_url', schema.profileEntries.profileOverride);
-          await m.addColumn(schema.profileEntries, schema.profileEntries.userOverride);
-          await m.addColumn(schema.profileEntries, schema.profileEntries.populatedHeaders);
+          final geoExists =
+              await customSelect("SELECT name FROM sqlite_master WHERE type='table' AND name='geo_asset_entries';").get();
+          if (geoExists.isNotEmpty) {
+            await m.deleteTable('geo_asset_entries');
+          }
+          final table = schema.profileEntries.actualTableName;
+          // Older fork builds (NiMiFy 4.x) already stored this schema shape: the
+          // column is named `profile_override` and `test_url` never existed.
+          // Renaming a missing column aborts the whole migration -> white screen.
+          if (await _columnExists(table, 'test_url')) {
+            await m.renameColumn(schema.profileEntries, 'test_url', schema.profileEntries.profileOverride);
+          } else if (!await _columnExists(table, 'profile_override')) {
+            await m.addColumn(schema.profileEntries, schema.profileEntries.profileOverride);
+          } else {
+            // legacy fork DB: keep its existing override column as-is
+            _legacyForkSchema = true;
+          }
+          if (!await _columnExists(table, 'user_override')) {
+            await m.addColumn(schema.profileEntries, schema.profileEntries.userOverride);
+          }
+          if (!await _columnExists(table, 'populated_headers')) {
+            await m.addColumn(schema.profileEntries, schema.profileEntries.populatedHeaders);
+          }
 
-          await m.createTable(schema.appProxyEntries);
+          final appProxyExists =
+              await customSelect("SELECT name FROM sqlite_master WHERE type='table' AND name='app_proxy_entries';").get();
+          if (appProxyExists.isEmpty) {
+            await m.createTable(schema.appProxyEntries);
+          }
         },
         from5To6: (m, schema) async {
           final profileOverrideExists = await _columnExists(
             schema.profileEntries.actualTableName,
             'profile_override',
           );
-          if (profileOverrideExists) {
-            await m.dropColumn(schema.profileEntries, 'profile_override');
-          }
+          // Upstream v6 removed this column. On a legacy fork DB it still holds the
+          // user's per-profile overrides, so leave the (harmless) column in place.
+          if (profileOverrideExists && !_legacyForkSchema) {
+            await m.dropColumn(schema.profileEntries, 'profile_override');
+          }
         },
         from6To7: (m, schema) async {
-          await m.addColumn(schema.profileEntries, schema.profileEntries.pinned);
+          if (!await _columnExists(schema.profileEntries.actualTableName, 'pinned')) {
+            await m.addColumn(schema.profileEntries, schema.profileEntries.pinned);
+          }
         },
       ),
     );

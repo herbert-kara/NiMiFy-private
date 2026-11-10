@@ -1,6 +1,6 @@
 {
   "common": {
-    "appTitle": "Hiddify",
+    "appTitle": "NiMiFy",
     "start": "Mulai",
     "version": "Versi",
     "ok": "Oke",
@@ -98,7 +98,7 @@
   "intro": {
     "banner": "Semua yang Anda butuhkan untuk internet tanpa batasan",
     "termsAndPolicyCaution(rich)": "Dengan melanjutkan, Anda menyetujui ${tap(@:pages.about.termsAndConditions)}",
-    "info(rich)": "Dibuat dengan ❤️ oleh Hiddify. ${tap_source(Sumber terbuka)} dan ${tap_license(Lisensi)}"
+    "info(rich)": "Dibuat dengan ❤️ oleh NiMiFy. ${tap_source(Sumber terbuka)} dan ${tap_license(Lisensi)}"
   },
   "pages": {
     "home": {
@@ -203,7 +203,7 @@
         "received": "Diterima dari ponsel",
         "from": "Dari $address",
         "page": {
-          "title": "Kirim ke Hiddify di TV",
+          "title": "Kirim ke NiMiFy di TV",
           "intro": "Tambahkan langganan ke TV dalam empat langkah cepat, tanpa mengetik dengan remote.",
           "steps": {
             "network": {
@@ -797,7 +797,7 @@
       "updateNow": "Perbarui sekarang",
       "downloading": "Mengunduh…",
       "installing": "Memulai pemasang…",
-      "allowInstall": "Izinkan Hiddify memasang aplikasi di pengaturan yang terbuka, lalu coba lagi.",
+      "allowInstall": "Izinkan NiMiFy memasang aplikasi di pengaturan yang terbuka, lalu coba lagi.",
       "failed": "Pembaruan tidak dapat dipasang.",
       "openPage": "Buka halaman rilis",
       "tryAgain": "Coba lagi"
@@ -837,7 +837,7 @@
     "adminBgService": {
       "vpnNeedsAdmin": {
         "title": "Izin administrator diperlukan",
-        "msg": "Mode VPN memerlukan izin administrator satu kali untuk memasang layanan latar belakang Hiddify. Setelah itu, Anda dapat terhubung tanpa permintaan lagi.",
+        "msg": "Mode VPN memerlukan izin administrator satu kali untuk memasang layanan latar belakang NiMiFy. Setelah itu, Anda dapat terhubung tanpa permintaan lagi.",
         "connectWithAdmin": "Hubungkan dengan izin administrator",
         "waitingTitle": "Menunggu izin administrator",
         "waitingMsg": "Izinkan permintaan administrator untuk melanjutkan. Anda dapat berhenti dan mencoba lagi nanti.",
@@ -926,7 +926,7 @@
     },
     "keepTop": {
       "title": "Langganan besar",
-      "description": "Profil ini berisi $count proxy. Menjalankan semuanya menghabiskan baterai, data, dan memori. Hiddify dapat mengujinya sekali, menjalankan $keep yang tercepat, dan menjeda sisanya.",
+      "description": "Profil ini berisi $count proxy. Menjalankan semuanya menghabiskan baterai, data, dan memori. NiMiFy dapat mengujinya sekali, menjalankan $keep yang tercepat, dan menjeda sisanya.",
       "hint": "Anda bisa menjalankan semuanya lagi kapan saja dari akhir daftar proxy.",
       "keeping": "$keep tercepat berjalan, sisanya dijeda",
       "all": "Semua $count berjalan",

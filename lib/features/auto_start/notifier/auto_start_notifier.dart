@@ -20,7 +20,7 @@ class AutoStartNotifier extends _$AutoStartNotifier with InfraLogger {
       appName: appInfo.name,
       appPath: Platform.resolvedExecutable,
       // Must equal identity_name in windows/packaging/msix/make_config.yaml.
-      packageName: "Hiddify.App.Win",
+      packageName: "Nim4a.NiMiFy",
     );
     final isEnabled = await launchAtStartup.isEnabled();
     loggy.info("auto start is [${isEnabled ? "Enabled" : "Disabled"}]");

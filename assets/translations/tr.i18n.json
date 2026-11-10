@@ -1,6 +1,6 @@
 {
   "common": {
-    "appTitle": "Hiddify",
+    "appTitle": "NiMiFy",
     "start": "Başlat",
     "version": "Sürüm",
     "ok": "Tamam",
@@ -98,7 +98,7 @@
   "intro": {
     "banner": "Sınırsız bir internet için ihtiyacınız olan her şey",
     "termsAndPolicyCaution(rich)": "Devam ederek ${tap(@:pages.about.termsAndConditions)} kabul etmiş olursunuz",
-    "info(rich)": "Hiddify tarafından ❤️ ile yapıldı. ${tap_source(Açık kaynak)} ve ${tap_license(Lisans)}"
+    "info(rich)": "NiMiFy tarafından ❤️ ile yapıldı. ${tap_source(Açık kaynak)} ve ${tap_license(Lisans)}"
   },
   "pages": {
     "home": {
@@ -203,7 +203,7 @@
         "received": "Telefonundan alındı",
         "from": "Gönderen: $address",
         "page": {
-          "title": "TV'deki Hiddify'a gönder",
+          "title": "TV'deki NiMiFy'a gönder",
           "intro": "Kumandayla yazmadan, dört kısa adımda TV'ye abonelik ekle.",
           "steps": {
             "network": {
@@ -797,7 +797,7 @@
       "updateNow": "Şimdi güncelle",
       "downloading": "İndiriliyor…",
       "installing": "Yükleyici başlatılıyor…",
-      "allowInstall": "Açılan ayarlarda Hiddify'ın uygulama yüklemesine izin verin, sonra tekrar deneyin.",
+      "allowInstall": "Açılan ayarlarda NiMiFy'ın uygulama yüklemesine izin verin, sonra tekrar deneyin.",
       "failed": "Güncelleme yüklenemedi.",
       "openPage": "Sürüm sayfasını aç",
       "tryAgain": "Tekrar dene"
@@ -837,7 +837,7 @@
     "adminBgService": {
       "vpnNeedsAdmin": {
         "title": "Yönetici izni gerekli",
-        "msg": "VPN modu, Hiddify arka plan hizmetini yüklemek için bir kerelik yönetici izni gerektirir. Bundan sonra başka bir istem olmadan bağlanabilirsiniz.",
+        "msg": "VPN modu, NiMiFy arka plan hizmetini yüklemek için bir kerelik yönetici izni gerektirir. Bundan sonra başka bir istem olmadan bağlanabilirsiniz.",
         "connectWithAdmin": "Yönetici izniyle bağlan",
         "waitingTitle": "Yönetici izni bekleniyor",
         "waitingMsg": "Devam etmek için yönetici istemini onaylayın. Durdurup daha sonra tekrar deneyebilirsiniz.",
@@ -926,7 +926,7 @@
     },
     "keepTop": {
       "title": "Büyük bir abonelik",
-      "description": "Bu profilde $count proxy var. Hepsini çalıştırmak pil, veri ve bellek harcar. Hiddify onları bir kez test edip en hızlı $keep tanesini çalışır bırakabilir, diğerlerini duraklatabilir.",
+      "description": "Bu profilde $count proxy var. Hepsini çalıştırmak pil, veri ve bellek harcar. NiMiFy onları bir kez test edip en hızlı $keep tanesini çalışır bırakabilir, diğerlerini duraklatabilir.",
       "hint": "İstediğiniz zaman proxy listesinin sonundan hepsini yeniden çalıştırabilirsiniz.",
       "keeping": "En hızlı $keep çalışır, diğerleri durur",
       "all": "$count tanesinin hepsi çalışır",

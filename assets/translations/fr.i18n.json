@@ -1,6 +1,6 @@
 {
   "common": {
-    "appTitle": "Hiddify",
+    "appTitle": "NiMiFy",
     "start": "Commencer",
     "version": "Version",
     "ok": "OK",
@@ -98,7 +98,7 @@
   "intro": {
     "banner": "Tout ce dont vous avez besoin pour un internet sans restrictions",
     "termsAndPolicyCaution(rich)": "En continuant, vous acceptez les ${tap(@:pages.about.termsAndConditions)}",
-    "info(rich)": "Fait avec ❤️ par Hiddify. ${tap_source(Open source)} et ${tap_license(Licence)}"
+    "info(rich)": "Fait avec ❤️ par NiMiFy. ${tap_source(Open source)} et ${tap_license(Licence)}"
   },
   "pages": {
     "home": {
@@ -203,7 +203,7 @@
         "received": "Reçu depuis votre téléphone",
         "from": "Depuis $address",
         "page": {
-          "title": "Envoyer à Hiddify sur votre téléviseur",
+          "title": "Envoyer à NiMiFy sur votre téléviseur",
           "intro": "Ajoutez un abonnement au téléviseur en quatre étapes, sans le saisir à la télécommande.",
           "steps": {
             "network": {
@@ -799,7 +799,7 @@
       "updateNow": "Mettre à jour",
       "downloading": "Téléchargement…",
       "installing": "Lancement de l'installateur…",
-      "allowInstall": "Autorisez Hiddify à installer des applications dans les réglages ouverts, puis réessayez.",
+      "allowInstall": "Autorisez NiMiFy à installer des applications dans les réglages ouverts, puis réessayez.",
       "failed": "La mise à jour n'a pas pu être installée.",
       "openPage": "Ouvrir la page de la version",
       "tryAgain": "Réessayer"
@@ -839,7 +839,7 @@
     "adminBgService": {
       "vpnNeedsAdmin": {
         "title": "Autorisation administrateur requise",
-        "msg": "Le mode VPN a besoin d’une autorisation administrateur unique pour installer le service d’arrière-plan de Hiddify. Ensuite, vous pourrez vous connecter sans autre demande.",
+        "msg": "Le mode VPN a besoin d’une autorisation administrateur unique pour installer le service d’arrière-plan de NiMiFy. Ensuite, vous pourrez vous connecter sans autre demande.",
         "connectWithAdmin": "Se connecter avec l’autorisation administrateur",
         "waitingTitle": "En attente de l’autorisation administrateur",
         "waitingMsg": "Acceptez la demande administrateur pour continuer. Vous pouvez arrêter et réessayer plus tard.",
@@ -928,7 +928,7 @@
     },
     "keepTop": {
       "title": "Un gros abonnement",
-      "description": "Ce profil contient $count proxys. Les garder tous actifs consomme batterie, données et mémoire. Hiddify peut les tester une fois, garder les $keep plus rapides et mettre les autres en pause.",
+      "description": "Ce profil contient $count proxys. Les garder tous actifs consomme batterie, données et mémoire. NiMiFy peut les tester une fois, garder les $keep plus rapides et mettre les autres en pause.",
       "hint": "Vous pouvez tous les réactiver à tout moment, en bas de la liste des proxys.",
       "keeping": "Les $keep plus rapides tournent, les autres en pause",
       "all": "Les $count tournent",

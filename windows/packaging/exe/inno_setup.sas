@@ -97,7 +97,7 @@ Root: HKLM; Subkey: "Software\Microsoft\Windows NT\CurrentVersion\AppCompatFlags
 Filename: "{app}\{{EXECUTABLE_NAME}}"; Description: "{cm:LaunchProgram,{{DISPLAY_NAME}}}"; Flags: {% if PRIVILEGES_REQUIRED == 'admin' %}runascurrentuser{% endif %} shellexec nowait postinstall skipifsilent
 
 [UninstallDelete]
-Type: filesandordirs; Name: "{userappdata}\Hiddify"
+Type: filesandordirs; Name: "{userappdata}\NiMiFy"
 
 [Code]
 // Stop/remove services via the Service Control Manager API.
