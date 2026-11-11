@@ -179,16 +179,16 @@ void _paintLook(_Ctx x) {
 void _barsWave(_Ctx x, {bool backwards = false}) {
   if (!x.p.drawLogo) return;
   final color = _alpha(x.col, x.p.logoOpacity);
-  double rank(int part) => backwards ? _HiLogo.rank.last - _HiLogo.rank[part] : _HiLogo.rank[part];
+  double rank(int part) => backwards ? _NimifyMark.rank.last - _NimifyMark.rank[part] : _NimifyMark.rank[part];
   final shade = [for (var i = 0; i < 4; i++) _alpha(color, .4 + .6 * _bump((x.f.time - rank(i) * .3) % 1.6))];
   x.logoSpace((c) {
-    // the H stays one piece: its crossbar fades from the short bar's shade into the tall bar's
-    c.drawPath(
-      _HiLogo.h,
-      Paint()..shader = ui.Gradient.linear(const Offset(16.84, 0), const Offset(23.58, 0), [shade[0], shade[1]]),
-    );
-    c.drawPath(_HiLogo.stem, Paint()..color = shade[2]);
-    c.drawPath(_HiLogo.dot, Paint()..color = shade[3]);
+    // the mark is one piece, so each column is shaded inside its own clip
+    for (var i = 0; i < 3; i++) {
+      c.save();
+      c.clipRect(_NimifyMark.clipOf(i));
+      c.drawPath(_NimifyMark.ink, Paint()..color = shade[i]);
+      c.restore();
+    }
   });
 }
 
@@ -233,7 +233,7 @@ void _error(_Ctx x) {
     ghost: _alpha(x.col, .16),
     dx: _shake(s),
     parts: _each((i) {
-      final bar = _HiLogo.bar[i];
+      final bar = _NimifyMark.bar[i];
       final drop = _easeOut((s - (2 - bar) * .1) / .55);
       final waver = .06 * math.sin(x.f.time * 2.3 + bar * 1.7) * settled;
       final fade = bar == 2 ? 1 - .4 * _osc(x.f.time, 2.2) * settled : 1.0;
@@ -588,7 +588,7 @@ class _Ctx {
     c.save();
     c.translate(logoRect.left, logoRect.top);
     c.scale(k);
-    c.clipPath(_HiLogo.all);
+    c.clipPath(_NimifyMark.all);
     paint(c);
     c.restore();
   }
@@ -644,9 +644,6 @@ class _Ctx {
 }
 
 // ---------------------------------------------------------------------------------------------
-// The Hi logo, from assets/images/logo.svg, in its 64 × 64 units, in four parts: the short bar with
-// the crossbar, the tall bar, the stem and the dot
-
 Path _svgPath(String d) {
   final path = Path();
   final tokens = RegExp(r'[MCLVHZ]|-?\d*\.?\d+').allMatches(d).map((m) => m.group(0)!).toList();
@@ -687,49 +684,37 @@ Path _svgPath(String d) {
   }
   return path;
 }
+// The NiMiFy mark, traced from assets/images/logo.svg, in its 64 x 64 units, in three parts: the
+// left bar, the stroke across the middle and the right bar
 
-abstract final class _HiLogo {
-  static final dot = _svgPath(
-    'M47.1582 14.4283C47.1582 13.8368 47.4684 13.2886 47.9757 12.9842L61.4494 4.89891C62.5721 4.22529 64.0003 '
-    '5.03389 64.0003 6.34306V20.2103C64.0003 21.1405 63.2461 21.8945 62.3161 21.8945H48.8424C47.9124 21.8945 '
-    '47.1582 21.1405 47.1582 20.2103V14.4283Z',
+abstract final class _NimifyMark {
+  /// The mark's outline, scaled to fill the 64 x 64 logo box.
+  static final ink = _svgPath(
+    'M61.62 1.36L62.98 1.7L63.32 8.17L64 49.7L51.4 62.3L49.7 62.64L47.66 60.6L18.72 27.91'
+    'L18.38 48.68L2.72 61.28L1.7 61.96L.34 61.62L0 12.6L.68 11.91L12.6 2.72L14.64 2.38'
+    'L45.28 30.64L45.28 12.6L45.96 11.23Z',
   );
 
-  static final h = _svgPath(
-    'M24.3966 26.4593C23.8893 26.7637 23.5789 27.3118 23.5789 27.9034V43.7921L23.5789 45.4751L23.5789 45.4763L23.5789 '
-    '48.0001C23.5789 48.9301 22.8249 49.6001 21.8947 49.6001H18.5263C17.5962 49.6001 16.8421 48.9301 16.8421 48.0001V '
-    '45.4751V34.976C16.8421 33.6669 15.4139 32.8583 14.2913 33.5319L0.817607 41.6171C0.310362 41.9216 0 42.4696 0 '
-    '43.0615V60.6342C0 61.5642 0.754048 62.3184 1.68421 62.3184H15.1579C16.0881 62.3184 16.8421 61.5642 16.8421 '
-    '60.6342V58.9488V56.8314C16.8421 55.9011 17.5962 55.3376 18.5263 55.3376H21.8947C22.8249 55.3376 23.5789 55.9011 '
-    '23.5789 56.8314V58.9488L23.5789 60.6342C23.5789 61.5642 24.333 62.3184 25.2632 62.3184H38.7368C39.6669 62.3184 '
-    '40.4211 61.5642 40.4211 60.6342V45.4763V43.7921V19.8182C40.4211 18.509 38.9928 17.7004 37.8701 18.374L24.3966 '
-    '26.4593Z',
-  )..fillType = PathFillType.evenOdd;
+  static final all = ink;
 
-  static final stem = _svgPath(
-    'M47.1592 28.7999V60.7999C47.1592 61.6836 47.9132 62.3999 48.8434 62.3999H62.3171C63.2472 62.3999 64.0013 61.6836 '
-    '64.0013 60.7999V28.7999C64.0013 27.9162 63.2472 27.1999 62.3171 27.1999H48.8434C47.9132 27.1999 47.1592 27.9162 '
-    '47.1592 28.7999Z',
-  );
-
-  static final all = Path.combine(PathOperation.union, Path.combine(PathOperation.union, h, stem), dot);
-
-  static Path pathOf(int part) => part < 2 ? h : (part == 2 ? stem : dot);
+  /// The mark is one piece: the parts differ only by the column they are clipped to.
+  static Path pathOf(int part) => part < 3 ? ink : Path();
 
   static Rect clipOf(int part) => switch (part) {
-    0 => const Rect.fromLTRB(-2, -2, 23.58, 66),
-    1 => const Rect.fromLTRB(23.58, -2, 42, 66),
+    0 => const Rect.fromLTRB(-2, -2, 18.72, 66),
+    1 => const Rect.fromLTRB(18.72, -2, 45.28, 66),
+    2 => const Rect.fromLTRB(45.28, -2, 66, 66),
     _ => const Rect.fromLTRB(-2, -2, 66, 66),
   };
 
-  static const tops = [32.9, 18.2, 27.2, 4.2];
-  static const bottoms = [62.32, 62.32, 62.4, 21.9];
-  static const centersX = [8.4, 32.0, 55.6, 55.6];
+  static const tops = [2.38, 6.13, 1.36, 64.0];
+  static const bottoms = [61.62, 57.19, 62.3, 64.0];
+  static const centersX = [9.19, 31.83, 54.47, 32.0];
 
-  /// The signal bar each part belongs to: the stem and the dot are the third.
+  /// The signal bar each part belongs to: the right bar is the third.
   static const bar = [0, 1, 2, 2];
 
-  /// The order the parts light up in: the dot just after the stem.
+  /// The order the parts light up in, left to right.
   static const rank = [0.0, 1.0, 2.0, 2.6];
 }
 
@@ -752,18 +737,18 @@ void _paintLogo(Canvas c, Rect r, {required Color color, List<_Part>? parts, Col
   c.scale(r.width / 64);
   for (var i = 0; i < 4; i++) {
     final s = parts?[i] ?? const _Part();
-    final top = _HiLogo.tops[i];
-    final bottom = _HiLogo.bottoms[i];
+    final top = _NimifyMark.tops[i];
+    final bottom = _NimifyMark.bottoms[i];
     c.save();
     c.translate(0, s.dy);
     if (s.scaleY != 1) {
-      c.translate(_HiLogo.centersX[i], bottom);
+      c.translate(_NimifyMark.centersX[i], bottom);
       c.scale(1, s.scaleY);
-      c.translate(-_HiLogo.centersX[i], -bottom);
+      c.translate(-_NimifyMark.centersX[i], -bottom);
     }
     // not antialiased, so the two halves of the H meet without a seam
-    c.clipRect(_HiLogo.clipOf(i), doAntiAlias: false);
-    final path = _HiLogo.pathOf(i);
+    c.clipRect(_NimifyMark.clipOf(i), doAntiAlias: false);
+    final path = _NimifyMark.pathOf(i);
     if (ghost != null) c.drawPath(path, Paint()..color = ghost);
     if (s.fill > 0 && s.opacity > 0) {
       if (s.fill < 1) c.clipRect(Rect.fromLTRB(-2, bottom - s.fill * (bottom - top), 66, 66));

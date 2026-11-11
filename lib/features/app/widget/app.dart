@@ -108,7 +108,6 @@ class App extends HookConsumerWidget with WidgetsBindingObserver, PresLogger {
                 debugShowCheckedModeBanner: false,
                 themeMode: themeMode.flutterThemeMode,
                 theme: theme.lightTheme(lightColorScheme),
-                darkTheme: theme.darkTheme(darkColorScheme),
                 title: Constants.appName,
                 builder: (context, child) {
                   final theme = Theme.of(context);
@@ -173,8 +172,7 @@ class App extends HookConsumerWidget with WidgetsBindingObserver, PresLogger {
   //                         debugShowCheckedModeBanner: false,
   //                         material: (context, platform) => MaterialAppRouterData(
   //                           theme: theme.lightTheme(lightColorScheme),
-  //                           darkTheme: theme.darkTheme(darkColorScheme),
-  //                           themeMode: themeMode.flutterThemeMode,
+  //             //                           themeMode: themeMode.flutterThemeMode,
   //                         ),
   //                         cupertino: (context, platform) {
   //                           final sysDark = MediaQuery.of(context).platformBrightness == Brightness.dark;

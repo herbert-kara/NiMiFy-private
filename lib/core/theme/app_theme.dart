@@ -18,30 +18,10 @@ class AppTheme {
     );
   }
 
-  ThemeData darkTheme(ColorScheme? darkColorScheme) {
-    final ColorScheme scheme =
-        darkColorScheme ?? ColorScheme.fromSeed(seedColor: const Color(0xFF293CA0), brightness: Brightness.dark);
-    return ThemeData(
-      useMaterial3: true,
-      colorScheme: scheme,
-      scaffoldBackgroundColor: mode.trueBlack ? Colors.black : scheme.surface,
-      fontFamily: fontFamily,
-      extensions: const <ThemeExtension<dynamic>>{ConnectionButtonTheme.light},
-    );
-  }
-
   CupertinoThemeData cupertinoThemeData(bool sysDark, ColorScheme? lightColorScheme, ColorScheme? darkColorScheme) {
-    final bool isDark = switch (mode) {
-      AppThemeMode.system => sysDark,
-      AppThemeMode.light => false,
-      AppThemeMode.dark => true,
-      AppThemeMode.black => true,
-    };
-    final def = CupertinoThemeData(brightness: isDark ? Brightness.dark : Brightness.light);
-    // final def = CupertinoThemeData(brightness: Brightness.dark);
-
-    // return def;
-    final defaultMaterialTheme = isDark ? darkTheme(darkColorScheme) : lightTheme(lightColorScheme);
+    // dark mode is gone, so the Cupertino theme is always the light one
+    final def = CupertinoThemeData(brightness: Brightness.light);
+    final defaultMaterialTheme = lightTheme(lightColorScheme);
     return MaterialBasedCupertinoThemeData(
       materialTheme: defaultMaterialTheme.copyWith(
         cupertinoOverrideTheme: def.copyWith(

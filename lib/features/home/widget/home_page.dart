@@ -87,14 +87,25 @@ class HomePage extends HookConsumerWidget {
         onPointerCancel: (_) => pixelTouched.value = false,
         child: Stack(
           children: [
-            // Dribbble-style background: charcoal gradient + status glow
+            // Background: the app's own surface, a little deeper at the bottom, plus a
+            // soft status glow behind the power button
             Positioned.fill(
-              child: ValueListenableBuilder<Color>(
-                valueListenable: bgAccent,
-                builder: (context, accent, _) {
-                  final on = accent.green > accent.red;
-                  return CustomPaint(
-                    painter: _HomeBgPainter(accent: accent, on: on ? 1 : 0),
+              child: Builder(
+                builder: (context) {
+                  final scheme = Theme.of(context).colorScheme;
+                  return ValueListenableBuilder<Color>(
+                    valueListenable: bgAccent,
+                    builder: (context, accent, _) {
+                      final on = accent.green > accent.red;
+                      return CustomPaint(
+                        painter: _HomeBgPainter(
+                          accent: accent,
+                          on: on ? 1 : 0,
+                          top: Color.alphaBlend(scheme.onSurface.withValues(alpha: .03), scheme.surface),
+                          bottom: Color.alphaBlend(scheme.primary.withValues(alpha: .07), scheme.surface),
+                        ),
+                      );
+                    },
                   );
                 },
               ),
@@ -197,13 +208,15 @@ class HomePage extends HookConsumerWidget {
   }
 }
 
-/// Dribbble-style home background: vertical charcoal gradient + soft radial
+/// Home background: the theme's surface, tinted at the bottom, plus a soft radial
 /// status glow behind the power button.
 class _HomeBgPainter extends CustomPainter {
   final Color accent;
   final double on;
+  final Color top;
+  final Color bottom;
 
-  _HomeBgPainter({required this.accent, required this.on});
+  _HomeBgPainter({required this.accent, required this.on, required this.top, required this.bottom});
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -212,14 +225,10 @@ class _HomeBgPainter extends CustomPainter {
     canvas.drawRect(
       full,
       Paint()
-        ..shader = const LinearGradient(
+        ..shader = LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [
-            Color(0xFF34383E),
-            Color(0xFF2C3036),
-            Color(0xFF23272C),
-          ],
+          colors: [top, Color.lerp(top, bottom, .55)!, bottom],
         ).createShader(full),
     );
     final Offset c = Offset(size.width / 2, size.height * 0.42);
@@ -227,8 +236,8 @@ class _HomeBgPainter extends CustomPainter {
     final Paint glow = Paint()
       ..shader = RadialGradient(
         colors: [
-          accent.withOpacity(0.16 + 0.10 * on),
-          accent.withOpacity(0.0),
+          accent.withValues(alpha: 0.10 + 0.08 * on),
+          accent.withValues(alpha: 0.0),
         ],
       ).createShader(Rect.fromCircle(center: c, radius: glowR));
     canvas.drawCircle(c, glowR, glow);
@@ -236,7 +245,7 @@ class _HomeBgPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_HomeBgPainter old) =>
-      old.accent != accent || old.on != on;
+      old.accent != accent || old.on != on || old.top != top || old.bottom != bottom;
 }
 
 class AppVersionLabel extends HookConsumerWidget {
